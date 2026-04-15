@@ -1358,7 +1358,7 @@ function renderBiblioteca(){
   document.getElementById('browser-count').textContent=filt.length+' plan'+(filt.length!==1?'es':'');
   const g=document.getElementById('browser-grid');
   if(!filt.length){g.innerHTML='<div class="browser-empty">No hay planes guardados con esos filtros.</div>';return;}
-  g.innerHTML=filt.map(p=>{const ri=savedPlans.indexOf(p);return`<div class="browser-card"><div class="browser-card-top"><div class="browser-card-title">${p.grupo} · ${p.fase} · ${p.subfase}</div></div><div class="browser-card-tags">${ptagGrupo(p.grupo)}<span class="ptag ptag-fase">${p.fase}</span><span class="ptag ptag-sub">${p.subfase}</span></div><div class="browser-card-meta">${p.objetivo?'Objetivo: '+p.objetivo+'<br>':''}Guardado: ${p.fecha||'—'}</div><div class="browser-card-actions"><button class="act-btn" onclick="cargarPlan(${ri})">Editar</button><button class="act-btn del" onclick="eliminarPlan(${ri})">Eliminar</button></div></div>`;}).join('');
+  g.innerHTML=filt.map(p=>{const ri=savedPlans.indexOf(p);return`<div class="browser-card"><div class="browser-card-top"><div class="browser-card-title">${p.grupo} · ${p.fase} · ${p.subfase}</div></div><div class="browser-card-tags">${ptagGrupo(p.grupo)}<span class="ptag ptag-fase">${p.fase}</span><span class="ptag ptag-sub">${p.subfase}</span></div><div class="browser-card-meta">${p.objetivo?'Objetivo: '+p.objetivo+'<br>':''}Guardado: ${p.fecha||'—'}</div><div class="browser-card-actions"><button class="act-btn" onclick="imprimirPlanDirecto(${ri})">🖨 Imprimir</button><button class="act-btn" onclick="cargarPlan(${ri})">Editar</button><button class="act-btn del" onclick="eliminarPlan(${ri})">Eliminar</button></div></div>`;}).join('');
 }
 
 function cargarPlan(idx){showConfirm('¿Cargar este plan?','Se reemplazará el plan en pantalla. Los cambios no guardados se perderán.',()=>{const p=savedPlans[idx];planDias=JSON.parse(JSON.stringify(p.dias));document.getElementById('sel-grupo').value=p.grupo||'';document.getElementById('sel-fase').value=p.fase||'';document.getElementById('sel-subfase').value=p.subfase||'';document.getElementById('meta-objetivo').value=p.objetivo||'';document.getElementById('meta-plan').value=p.plan_num||'';document.getElementById('meta-nombre').value=p.nombre||'';updateAssignBadge();switchPlanesSubtab('editor');renderDias();document.getElementById('plan-editor-content').scrollTop=0;toast('Plan cargado');});}
@@ -1562,6 +1562,39 @@ function selectEjercicioFromPicker(nombre){
   const inp=document.getElementById('inp-'+pickerTargetEjeId);
   if(inp){ inp.value=nombre; inp.dispatchEvent(new Event('input')); }
   closePickerModal();
+}
+
+function imprimirPlanDirecto(idx){
+  // Guardar estado actual del editor
+  const diasBackup = JSON.parse(JSON.stringify(planDias));
+  const grupoBackup = document.getElementById('sel-grupo').value;
+  const faseBackup  = document.getElementById('sel-fase').value;
+  const subBackup   = document.getElementById('sel-subfase').value;
+  const objBackup   = document.getElementById('meta-objetivo').value;
+  const numBackup   = document.getElementById('meta-plan').value;
+  const nomBackup   = document.getElementById('meta-nombre').value;
+
+  // Cargar el plan seleccionado temporalmente
+  const p = savedPlans[idx];
+  planDias = JSON.parse(JSON.stringify(p.dias));
+  document.getElementById('sel-grupo').value   = p.grupo||'';
+  document.getElementById('sel-fase').value    = p.fase||'';
+  document.getElementById('sel-subfase').value = p.subfase||'';
+  document.getElementById('meta-objetivo').value = p.objetivo||'';
+  document.getElementById('meta-plan').value   = p.plan_num||'';
+  document.getElementById('meta-nombre').value = p.nombre||'';
+
+  // Imprimir
+  imprimirPlan();
+
+  // Restaurar estado anterior
+  planDias = diasBackup;
+  document.getElementById('sel-grupo').value   = grupoBackup;
+  document.getElementById('sel-fase').value    = faseBackup;
+  document.getElementById('sel-subfase').value = subBackup;
+  document.getElementById('meta-objetivo').value = objBackup;
+  document.getElementById('meta-plan').value   = numBackup;
+  document.getElementById('meta-nombre').value = nomBackup;
 }
 
 // ══ IMPRESIÓN ══
