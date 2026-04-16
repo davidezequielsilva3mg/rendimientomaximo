@@ -242,6 +242,10 @@ tr:hover td { background: #faf9f7; }
 .historial-obs { font-size:12px;color:var(--text-secondary);margin-top:2px; }
 .historial-actions { display:flex;gap:4px; }
 .historial-empty { padding:24px 16px;text-align:center;color:var(--text-muted);font-size:13px; }
+.btn-personalizar { background:#111;color:#fff;border:none;border-radius:5px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:500; }
+.btn-personalizar:hover { background:#333; }
+.btn-personalizar.activo { background:#1e8449; }
+.historial-dias { font-size:11px;color:var(--text-muted);margin-top:2px; }
 .cat-pill { display: inline-block; font-size: 11px; padding: 2px 9px; border-radius: 20px; font-weight: 500; background: #f0f0f0; color: #555; }
 .cat-pill.fuerza { background: #fff0e0; color: #a05a00; }
 .cat-pill.cardio { background: #e8f4e8; color: #2d6a2d; }
@@ -601,6 +605,17 @@ tr:hover td { background: #faf9f7; }
         </select>
       </div>
       <div class="form-group">
+        <label class="form-label">Días por semana *</label>
+        <select class="form-input" id="ap-dias">
+          <option value="">— Seleccioná —</option>
+          <option value="1">1 día</option>
+          <option value="2">2 días</option>
+          <option value="3">3 días</option>
+          <option value="4">4 días</option>
+          <option value="5">5 días</option>
+        </select>
+      </div>
+      <div class="form-group">
         <label class="form-label">Observaciones</label>
         <textarea class="form-input" id="ap-obs" rows="2" placeholder="Notas sobre este plan..."></textarea>
       </div>
@@ -853,7 +868,7 @@ function abrirPerfil(id){
 }
 
 function renderHistorial(id){
-  const planes = (historialPlanes[id]||[]).slice().reverse(); // más reciente primero
+  const planes = (historialPlanes[id]||[]).slice().reverse();
   const body = document.getElementById('perfil-historial-body');
   document.getElementById('perfil-historial-count').textContent = planes.length+' plan'+(planes.length!==1?'es':'');
 
@@ -866,6 +881,7 @@ function renderHistorial(id){
     const [y,m,d]=p.fecha.split('-');
     const fechaStr=`${d}/${m}/${y}`;
     const gc=p.grupo?`ptag-${p.grupo.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')}`:' ptag-sub';
+    const tienePersonalizado = p.plan_personalizado && p.plan_personalizado.dias;
     return`<div class="historial-item">
       <div class="historial-fecha">${fechaStr}</div>
       <div style="flex:1">
@@ -873,10 +889,14 @@ function renderHistorial(id){
           <span class="ptag ${gc}">${p.grupo}</span>
           <span class="ptag ptag-fase">${p.fase}</span>
           <span class="ptag ptag-sub">${p.subfase}</span>
+          ${tienePersonalizado?'<span class="ptag" style="background:#e8f4e8;color:#2d6a2d">✓ Personalizado</span>':''}
         </div>
+        ${p.dias_semana?`<div class="historial-dias">📅 ${p.dias_semana} día${p.dias_semana>1?'s':''} por semana</div>`:''}
         ${p.obs?`<div class="historial-obs">${p.obs}</div>`:''}
       </div>
-      <div class="historial-actions">
+      <div class="historial-actions" style="display:flex;gap:4px;flex-wrap:wrap">
+        <button class="act-btn" onclick="imprimirPlanAlumno('${p.id}')">🖨</button>
+        <button class="btn-personalizar ${tienePersonalizado?'activo':''}" onclick="abrirPersonalizar('${p.id}')">${tienePersonalizado?'✏ Personalizado':'Personalizar'}</button>
         <button class="act-btn" onclick="editAsignacion('${p.id}')">Editar</button>
         <button class="act-btn del" onclick="deleteAsignacion('${p.id}')">Eliminar</button>
       </div>
@@ -907,6 +927,7 @@ function openAsignarPlanModal(asigId=null){
       document.getElementById('ap-grupo').value=p.grupo;
       document.getElementById('ap-fase').value=p.fase;
       document.getElementById('ap-subfase').value=p.subfase;
+      document.getElementById('ap-dias').value=p.dias_semana||'';
       document.getElementById('ap-obs').value=p.obs||'';
     }
   } else {
@@ -914,6 +935,7 @@ function openAsignarPlanModal(asigId=null){
     document.getElementById('ap-grupo').value='';
     document.getElementById('ap-fase').value='';
     document.getElementById('ap-subfase').value='';
+    document.getElementById('ap-dias').value='';
     document.getElementById('ap-obs').value='';
   }
   document.getElementById('asignar-plan-modal').classList.add('open');
@@ -925,15 +947,16 @@ async function saveAsignarPlan(){
   const grupo=document.getElementById('ap-grupo').value;
   const fase=document.getElementById('ap-fase').value;
   const subfase=document.getElementById('ap-subfase').value;
+  const dias_semana=parseInt(document.getElementById('ap-dias').value)||null;
   if(!fecha||!grupo||!fase||!subfase){alert('Completá fecha, grupo, fase y subfase');return;}
   const obs=document.getElementById('ap-obs').value.trim();
   if(editandoAsignacion){
-    await sb.from('historial_planes').update({fecha,grupo,fase,subfase,obs}).eq('id',editandoAsignacion);
+    await sb.from('historial_planes').update({fecha,grupo,fase,subfase,obs,dias_semana}).eq('id',editandoAsignacion);
     const lista=historialPlanes[perfilAlumnoId]||[];
     const idx=lista.findIndex(p=>p.id===editandoAsignacion);
-    if(idx>=0) lista[idx]={...lista[idx],fecha,grupo,fase,subfase,obs};
+    if(idx>=0) lista[idx]={...lista[idx],fecha,grupo,fase,subfase,obs,dias_semana};
   } else {
-    const {data:row}=await sb.from('historial_planes').insert({alumno_id:perfilAlumnoId,fecha,grupo,fase,subfase,obs}).select().single();
+    const {data:row}=await sb.from('historial_planes').insert({alumno_id:perfilAlumnoId,fecha,grupo,fase,subfase,obs,dias_semana}).select().single();
     if(row){
       if(!historialPlanes[perfilAlumnoId]) historialPlanes[perfilAlumnoId]=[];
       historialPlanes[perfilAlumnoId].push(row);
@@ -947,6 +970,125 @@ async function saveAsignarPlan(){
 }
 
 function editAsignacion(asigId){openAsignarPlanModal(asigId);}
+
+// ── Imprimir plan del alumno ──
+function imprimirPlanAlumno(asigId){
+  const lista = historialPlanes[perfilAlumnoId]||[];
+  const asig = lista.find(p=>p.id==asigId);
+  if(!asig){toast('No se encontró la asignación','#c0392b');return;}
+
+  // Buscar plan personalizado o plan base
+  const diasAImprimir = asig.plan_personalizado?.dias || null;
+  const planBase = savedPlans.find(p=>p.grupo===asig.grupo&&p.fase===asig.fase&&p.subfase===asig.subfase);
+
+  if(!diasAImprimir && !planBase){
+    toast('No hay plan guardado para '+asig.grupo+' '+asig.fase+' '+asig.subfase,'#c0392b');
+    return;
+  }
+
+  // Backup del editor
+  const bk = {
+    dias:JSON.parse(JSON.stringify(planDias)),
+    grupo:document.getElementById('sel-grupo').value,
+    fase:document.getElementById('sel-fase').value,
+    sub:document.getElementById('sel-subfase').value,
+    obj:document.getElementById('meta-objetivo').value,
+    num:document.getElementById('meta-plan').value,
+    nom:document.getElementById('meta-nombre').value,
+  };
+
+  // Cargar temporalmente
+  const alumno = alumnos.find(a=>a.id===perfilAlumnoId);
+  planDias = JSON.parse(JSON.stringify(diasAImprimir || planBase.dias));
+  document.getElementById('sel-grupo').value   = asig.grupo||'';
+  document.getElementById('sel-fase').value    = asig.fase||'';
+  document.getElementById('sel-subfase').value = asig.subfase||'';
+  document.getElementById('meta-objetivo').value = planBase?.objetivo||'';
+  document.getElementById('meta-plan').value   = planBase?.plan_num||'';
+  document.getElementById('meta-nombre').value = alumno?`${alumno.nombre} ${alumno.apellido}`:'';
+
+  imprimirPlan();
+
+  // Restaurar
+  planDias = bk.dias;
+  document.getElementById('sel-grupo').value   = bk.grupo;
+  document.getElementById('sel-fase').value    = bk.fase;
+  document.getElementById('sel-subfase').value = bk.sub;
+  document.getElementById('meta-objetivo').value = bk.obj;
+  document.getElementById('meta-plan').value   = bk.num;
+  document.getElementById('meta-nombre').value = bk.nom;
+}
+
+// ── Personalizar plan ──
+let personalizandoAsigId = null;
+
+function abrirPersonalizar(asigId){
+  const lista = historialPlanes[perfilAlumnoId]||[];
+  const asig = lista.find(p=>p.id==asigId);
+  if(!asig){toast('No se encontró la asignación','#c0392b');return;}
+
+  const planBase = savedPlans.find(p=>p.grupo===asig.grupo&&p.fase===asig.fase&&p.subfase===asig.subfase);
+  if(!planBase && !asig.plan_personalizado){
+    toast('Primero guardá el plan base en Planes → '+asig.grupo+' '+asig.fase+' '+asig.subfase,'#c0392b');
+    return;
+  }
+
+  personalizandoAsigId = asigId;
+  const alumno = alumnos.find(a=>a.id===perfilAlumnoId);
+
+  // Cargar en el editor la copia del alumno (o el plan base si no tiene)
+  planDias = JSON.parse(JSON.stringify(asig.plan_personalizado?.dias || planBase.dias));
+  document.getElementById('sel-grupo').value   = asig.grupo||'';
+  document.getElementById('sel-fase').value    = asig.fase||'';
+  document.getElementById('sel-subfase').value = asig.subfase||'';
+  document.getElementById('meta-objetivo').value = planBase?.objetivo||'';
+  document.getElementById('meta-plan').value   = planBase?.plan_num||'';
+  document.getElementById('meta-nombre').value = alumno?`${alumno.nombre} ${alumno.apellido}`:'';
+
+  // Ir a la pestaña de planes, editor
+  switchTab('planes', document.querySelector('.nav-item:nth-child(3)'));
+  switchPlanesSubtab('editor');
+  renderDias();
+  updateAssignBadge();
+  document.getElementById('plan-editor-content').scrollTop=0;
+
+  // Cambiar el botón guardar temporalmente
+  const btnGuardar = document.querySelector('.btn-green[onclick="guardarPlan()"]');
+  if(btnGuardar){
+    btnGuardar.textContent = '💾 Guardar personalización';
+    btnGuardar.onclick = () => guardarPersonalizacion();
+  }
+
+  toast(`Editando plan personalizado de ${alumno?.nombre||'alumno'} — guardá cuando termines`);
+}
+
+async function guardarPersonalizacion(){
+  if(!personalizandoAsigId) return;
+  const lista = historialPlanes[perfilAlumnoId]||[];
+  const asig = lista.find(p=>p.id==personalizandoAsigId);
+  if(!asig) return;
+
+  // Guardar la copia personalizada en la asignación
+  const planPersonalizado = { dias: JSON.parse(JSON.stringify(planDias)) };
+  await sb.from('historial_planes').update({ plan_personalizado: planPersonalizado }).eq('id',personalizandoAsigId);
+  asig.plan_personalizado = planPersonalizado;
+
+  // Restaurar botón guardar
+  const btnGuardar = document.querySelector('.btn-green');
+  if(btnGuardar){
+    btnGuardar.textContent = 'Guardar plan';
+    btnGuardar.onclick = () => guardarPlan();
+  }
+
+  personalizandoAsigId = null;
+  toast('Plan personalizado guardado ✓');
+
+  // Volver al perfil del alumno
+  setTimeout(()=>{
+    switchTab('alumnos', document.querySelector('.nav-item:nth-child(1)'));
+    abrirPerfil(perfilAlumnoId);
+  }, 800);
+}
 
 function deleteAsignacion(asigId){
   showConfirm('¿Eliminar esta asignación?','Esta acción no se puede deshacer.',async()=>{
