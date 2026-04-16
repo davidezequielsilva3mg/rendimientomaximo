@@ -309,60 +309,12 @@ tr:hover td { background: #faf9f7; }
 #print-area { display: none; }
 
 @media print {
-  @page { size: A4 portrait; margin: 6mm 6mm; }
+  @page { size: A4 portrait; margin: 10mm; }
   body, html { height: auto !important; overflow: visible !important; background: #fff !important; }
   .layout, .sidebar, .main, .tab-content, .modal-overlay, .toast { display: none !important; }
-  #print-area { display: block !important; }
-
-  * { box-sizing: border-box; }
-
-  .print-doc { width: 100%; font-family: Arial, Helvetica, sans-serif; font-size: 7pt; color: #000; }
-
-  /* ── HEADER ── */
-  .ph-wrap { width: 100%; border-collapse: collapse; border: 1px solid #000; margin-bottom: 0; }
-  .ph-wrap td, .ph-wrap th { border: 1px solid #000; padding: 2px 4px; vertical-align: middle; }
-  .ph-logo { width: 80px; text-align: center; font-size: 14pt; font-weight: 900; border-right: 2px solid #000; }
-  .ph-profesor { font-size: 6.5pt; font-weight: 700; text-transform: uppercase; text-align: center; }
-  .ph-alumno { font-size: 6.5pt; font-weight: 700; text-transform: uppercase; text-align: center; }
-  .ph-act-label { font-size: 6pt; font-weight: 700; text-transform: uppercase; text-align: center; background: #e8e8e8; }
-  .ph-act-val { font-size: 6.5pt; text-align: center; height: 14px; }
-  .ph-meta-label { font-size: 6.5pt; font-weight: 700; text-align: right; background: #e8e8e8; white-space: nowrap; }
-  .ph-meta-val { font-size: 6.5pt; min-width: 60px; }
-  .ph-frecuencia { font-size: 6.5pt; font-weight: 700; background: #e8e8e8; }
-
-  /* ── SEMANA HEADERS ── */
-  .ps-wrap { width: 100%; border-collapse: collapse; margin-top: 0; }
-  .ps-wrap td { border: 1px solid #000; padding: 2px 1px; text-align: center; font-size: 6.5pt; font-weight: 700; text-transform: uppercase; background: #e8e8e8; }
-  .ps-dia-col { width: 38px; background: #fff !important; border: none !important; }
-
-  /* ── DÍA BLOQUE ── */
-  .pd-table { width: 100%; border-collapse: collapse; }
-  .pd-table td, .pd-table th { border: 1px solid #999; padding: 0; vertical-align: middle; }
-
-  /* Cabecera del día */
-  .pd-dia-header { background: #111; color: #fff; font-size: 7pt; font-weight: 700; text-align: left; padding: 2px 5px; }
-  .pd-dia-header-ejercicio { background: #e8e8e8; font-size: 6pt; font-weight: 700; text-align: center; padding: 1px; }
-
-  /* Columna de letra */
-  .pd-letra { width: 14px; font-size: 7pt; font-weight: 700; text-align: center; background: #f0f0f0; }
-
-  /* Nombre del ejercicio */
-  .pd-eje-name { font-size: 6.5pt; font-weight: 600; text-align: center; padding: 1px 3px; background: #f9f9f9; border-bottom: 1px solid #bbb !important; }
-
-  /* Celdas de valores */
-  .pd-val { width: 15px; text-align: center; font-size: 6pt; height: 10px; border: 0.3px solid #bbb !important; }
-  .pd-val.kg { background: #f5f5f5; font-size: 5.5pt; color: #333; height: 10px; }
-
-  /* Sub-headers S1 S2 etc */
-  .pd-sh { font-size: 5.5pt; font-weight: 700; text-align: center; background: #ddd; padding: 1px 0; }
-  .pd-sh.s1 { background: #ccd9f0; }
-  .pd-sh.s2 { background: #f0e6b0; }
-  .pd-sh.s3 { background: #c8ecd4; }
-  .pd-sh.s4 { background: #e8d0f0; }
-
-  /* Finalizador */
-  .pd-finalizador { font-size: 6.5pt; font-weight: 700; padding: 2px 5px; background: #e8e8e8; border-top: 1.5px solid #000 !important; }
-  .pd-fin-label { font-weight: 700; text-transform: uppercase; }
+  #print-area { display: block !important; position: absolute; top: 0; left: 0; width: 100%; }
+  #print-content { transform-origin: top left !important; }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 }
 </style>
 </head>
@@ -2314,136 +2266,108 @@ function imprimirPlan() {
   const obj    = document.getElementById('meta-objetivo').value;
   const alumno = document.getElementById('meta-nombre').value;
 
-  // Activaciones de cada día
-  const acts = planDias.map(dia => {
-    if(!Array.isArray(dia.activacion)) return [];
-    return dia.activacion.map(a=>a.nombre||'');
-  });
+  const logoHTML = gymConfig.logoDataUrl
+    ? `<img src="${gymConfig.logoDataUrl}" style="max-width:100%;max-height:100%;object-fit:contain" />`
+    : `<span style="font-size:10pt;font-weight:900">${gymConfig.nombre||'LOGO'}</span>`;
 
-  // ── HEADER ──
-  // Fila 1: Logo | PROFESOR (vacío) | ALUMNO (vacío)
-  // Fila 2: Logo | Activación Día 1 | Activación Día 2 | Activación Día 3
-  // Fila 3: Grupo/Fase/Subfase + activaciones 2 y 3
-  // Fila 4: Frecuencia
+  const acts = planDias.map(dia =>
+    Array.isArray(dia.activacion) ? dia.activacion.map(a=>a.nombre||'').filter(Boolean) : []
+  );
 
-  const actCols = planDias.map((dia,i)=>`
-    <td class="ph-act-label">ACTIVACIÓN DÍA ${dia.num}</td>`).join('');
-  const actVals = planDias.map((dia,i)=>`
-    <td class="ph-act-val">${(acts[i]||[]).filter(Boolean).join(' / ')}</td>`).join('');
+  const LETRAS = ['A','A','B','B','C','C','D','D'];
+  const SH_COLORS = ['#ccd9f0','#f0e6b0','#c8ecd4','#e8d0f0'];
+  const N = 5;
+  const totalValCols = N * 4;
+
+  const actDias = planDias.map((dia,i) =>
+    `<td style="border:1px solid #000;padding:1px 3px;font-size:5.5pt;font-weight:700;text-transform:uppercase;text-align:center;background:#e8e8e8">ACT. DÍA ${dia.num}</td>
+     <td style="border:1px solid #000;padding:1px 4px;font-size:5.5pt">${acts[i].join(' / ')||'—'}</td>`
+  ).join('');
 
   const header = `
-  <table class="ph-wrap" style="width:100%;border-collapse:collapse;margin-bottom:2px">
+  <table style="width:100%;border-collapse:collapse;margin-bottom:1px;table-layout:fixed">
     <tr>
-      <td rowspan="4" class="ph-logo" style="width:70px;border:1px solid #000;text-align:center;font-size:14pt;font-weight:900;vertical-align:middle">LOGO</td>
-      <td colspan="2" class="ph-profesor" style="border:1px solid #000;padding:2px 4px;font-size:6.5pt;font-weight:700;text-transform:uppercase;text-align:center">PROFESOR</td>
-      <td colspan="3" class="ph-alumno" style="border:1px solid #000;padding:2px 4px;font-size:6.5pt;font-weight:700;text-transform:uppercase;text-align:center">ALUMNO: ${alumno||''}</td>
+      <td rowspan="3" style="width:60px;min-width:60px;border:1.5px solid #000;text-align:center;vertical-align:middle;padding:2px">${logoHTML}</td>
+      <td colspan="2" style="border:1px solid #000;padding:1px 4px;font-size:5.5pt;font-weight:700;text-transform:uppercase;text-align:center;background:#e8e8e8">PROFESOR</td>
+      <td colspan="${planDias.length*2}" style="border:1px solid #000;padding:1px 4px;font-size:5.5pt;font-weight:700;text-align:center">ALUMNO: ${alumno||''}</td>
     </tr>
     <tr>
-      <td class="ph-act-label" style="border:1px solid #000;padding:1px 3px;font-size:6pt;font-weight:700;text-transform:uppercase;text-align:center;background:#e8e8e8">ACTIVACIÓN DÍA 1</td>
-      <td class="ph-act-val" style="border:1px solid #000;padding:2px 4px;font-size:6.5pt">${(acts[0]||[]).filter(Boolean).join(' / ')}</td>
-      <td class="ph-act-label" style="border:1px solid #000;padding:1px 3px;font-size:6pt;font-weight:700;text-transform:uppercase;text-align:center;background:#e8e8e8">ACTIVACIÓN DÍA 2</td>
-      <td class="ph-act-val" style="border:1px solid #000;padding:2px 4px;font-size:6.5pt">${(acts[1]||[]).filter(Boolean).join(' / ')}</td>
-      <td class="ph-act-label" style="border:1px solid #000;padding:1px 3px;font-size:6pt;font-weight:700;text-transform:uppercase;text-align:center;background:#e8e8e8">ACTIVACIÓN DÍA 3</td>
-      <td class="ph-act-val" style="border:1px solid #000;padding:2px 4px;font-size:6.5pt">${(acts[2]||[]).filter(Boolean).join(' / ')}</td>
+      <td style="border:1px solid #000;padding:1px 3px;font-size:5.5pt;font-weight:700;background:#e8e8e8;text-align:right">GRUPO</td>
+      <td style="border:1px solid #000;padding:1px 4px;font-size:5.5pt">${grupo||''}</td>
+      ${actDias}
     </tr>
     <tr>
-      <td style="border:1px solid #000;padding:1px 3px;font-size:6.5pt;font-weight:700;background:#e8e8e8;text-align:right">GRUPO</td>
-      <td style="border:1px solid #000;padding:1px 4px;font-size:6.5pt">${grupo||''}</td>
-      <td style="border:1px solid #000;padding:1px 3px;font-size:6.5pt;font-weight:700;background:#e8e8e8;text-align:right">FASE</td>
-      <td style="border:1px solid #000;padding:1px 4px;font-size:6.5pt">${fase||''}</td>
-      <td style="border:1px solid #000;padding:1px 3px;font-size:6.5pt;font-weight:700;background:#e8e8e8;text-align:right">SUBFASE</td>
-      <td style="border:1px solid #000;padding:1px 4px;font-size:6.5pt">${sub||''}</td>
-    </tr>
-    <tr>
-      <td colspan="5" style="border:1px solid #000;padding:1px 3px;font-size:6.5pt;font-weight:700;background:#e8e8e8">FRECUENCIA: ${obj||''}</td>
+      <td style="border:1px solid #000;padding:1px 3px;font-size:5.5pt;font-weight:700;background:#e8e8e8;text-align:right">FASE/SUB</td>
+      <td style="border:1px solid #000;padding:1px 4px;font-size:5.5pt">${[fase,sub].filter(Boolean).join(' · ')||''}</td>
+      <td colspan="${planDias.length*2}" style="border:1px solid #000;padding:1px 4px;font-size:5.5pt;font-weight:700;background:#e8e8e8">FREC: ${obj||''}</td>
     </tr>
   </table>`;
 
-  // ── SEMANA HEADERS ──
-  // 5 series por semana × 4 semanas = 20 celdas de valor
-  const N = 5; // series por semana
-  const semHeaderRow1 = `<td style="width:14px;border:none;background:#fff"></td><td style="width:14px;border:none;background:#fff"></td>` +
-    ['SEMANA 1','SEMANA 2','SEMANA 3','SEMANA 4'].map(s=>
-      `<td colspan="${N}" style="border:1px solid #999;padding:1px;text-align:center;font-size:6.5pt;font-weight:700;background:#e8e8e8;text-transform:uppercase">${s}</td>`
-    ).join('');
-
-  const shColors = ['#ccd9f0','#f0e6b0','#c8ecd4','#e8d0f0'];
-  const semHeaderRow2 = `<td style="border:none;background:#fff"></td><td style="border:none;background:#fff"></td>` +
-    [0,1,2,3].map(si=>
-      Array.from({length:N},(_,i)=>
-        `<td style="border:0.3px solid #bbb;padding:1px 0;text-align:center;font-size:5.5pt;font-weight:700;background:${shColors[si]}">S${i+1}</td>`
-      ).join('')
-    ).join('');
-
-  const semHeaders = `
-  <table style="width:100%;border-collapse:collapse;margin-bottom:0">
-    <tr>${semHeaderRow1}</tr>
-    <tr>${semHeaderRow2}</tr>
-  </table>`;
-
-  // ── LETRAS por ejercicio (A,A,B,B,C,C,D según planilla) ──
-  const LETRAS = ['A','A','B','B','C','C','D'];
-
-  // ── FUNCIÓN PARA GENERAR UN DÍA ──
   function buildDia(dia) {
     const bloque = dia.bloques[0];
-    let rows = '';
+    const semRow1 = `<td colspan="2" style="border:none;background:#fff;width:18px"></td>` +
+      ['S1','S2','S3','S4'].map((s,si)=>
+        `<td colspan="${N}" style="border:1px solid #999;padding:1px;text-align:center;font-size:5pt;font-weight:700;background:#e8e8e8">SEMANA ${si+1}</td>`
+      ).join('');
+    const semRow2 = `<td colspan="2" style="border:none;background:#fff"></td>` +
+      [0,1,2,3].map(si=>
+        Array.from({length:N},(_,i)=>
+          `<td style="text-align:center;font-size:4.5pt;font-weight:700;background:${SH_COLORS[si]};border:0.3px solid #bbb;padding:0">S${i+1}</td>`
+        ).join('')
+      ).join('');
 
+    let rows = '';
     bloque.ejercicios.forEach((eje, ei) => {
-      const letra = LETRAS[ei] || String.fromCharCode(65 + ei);
-      // Fila nombre ejercicio (span 2 columnas de número)
-      const totalCols = N * 4;
+      const letra = LETRAS[ei] || String.fromCharCode(65 + Math.floor(ei/2));
       rows += `<tr>
-        <td rowspan="2" class="pd-letra" style="width:14px;font-size:7pt;font-weight:700;text-align:center;background:#f0f0f0;border:1px solid #999;vertical-align:middle">${letra}</td>
-        <td rowspan="2" style="width:14px;border:1px solid #999;background:#f0f0f0"></td>
-        <td colspan="${totalCols}" class="pd-eje-name" style="font-size:6.5pt;font-weight:600;text-align:center;padding:1px 3px;background:#f9f9f9;border:1px solid #999">${eje.nombre||'EJERCICIO'}</td>
-      </tr>
-      <tr>`;
-      // Celdas de REP
+        <td rowspan="3" style="width:9px;font-size:6pt;font-weight:700;text-align:center;background:#f0f0f0;border:1px solid #999;vertical-align:middle;padding:0">${letra}</td>
+        <td rowspan="3" style="width:9px;border:0.3px solid #ddd;background:#f5f5f5"></td>
+        <td colspan="${totalValCols}" style="font-size:5.5pt;font-weight:600;text-align:center;padding:1px 2px;background:#f9f9f9;border:1px solid #999">${eje.nombre||'EJERCICIO'}</td>
+      </tr><tr>`;
       [0,1,2,3].forEach(si=>{
-        const s = SEMANAS[si];
-        const vals = eje.reps[s]||[];
-        for(let i=0;i<N;i++){
-          rows += `<td style="width:15px;text-align:center;font-size:6pt;height:10px;border:0.3px solid #bbb;padding:0">${vals[i]||''}</td>`;
-        }
+        const s=SEMANAS[si]; const vals=eje.reps[s]||[];
+        for(let i=0;i<N;i++) rows+=`<td style="text-align:center;font-size:5pt;height:8px;border:0.3px solid #bbb;padding:0">${vals[i]||''}</td>`;
       });
-      rows += `</tr>`;
-      // Fila KG
-      rows += `<tr><td colspan="2" style="border:none;background:#fff"></td>`;
+      rows += `</tr><tr>`;
       [0,1,2,3].forEach(si=>{
-        const s = SEMANAS[si];
-        const vals = (eje.kgs&&eje.kgs[s])||[];
-        for(let i=0;i<N;i++){
-          rows += `<td style="width:15px;text-align:center;font-size:5.5pt;height:10px;border:0.3px solid #bbb;background:#f5f5f5;color:#333;padding:0">${vals[i]?vals[i]+' kg':''}</td>`;
-        }
+        const s=SEMANAS[si]; const vals=(eje.kgs&&eje.kgs[s])||[];
+        for(let i=0;i<N;i++) rows+=`<td style="text-align:center;font-size:4.5pt;height:8px;border:0.3px solid #bbb;background:#f5f5f5;color:#444;padding:0">${vals[i]?vals[i]+'k':''}</td>`;
       });
       rows += `</tr>`;
     });
 
     return `
-    <table style="width:100%;border-collapse:collapse;margin-bottom:1px">
-      <tr>
-        <td colspan="${N*4+2}" style="background:#111;color:#fff;font-size:7pt;font-weight:700;padding:2px 5px;border:1px solid #000">DÍA ${dia.num}</td>
-      </tr>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:1px;table-layout:fixed">
+      <tr><td colspan="${totalValCols+2}" style="background:#222;color:#fff;font-size:6pt;font-weight:700;padding:1px 5px;border:1px solid #000">DÍA ${dia.num}</td></tr>
+      <tr>${semRow1}</tr>
+      <tr>${semRow2}</tr>
       ${rows}
-      <tr>
-        <td colspan="${N*4+2}" style="border-top:1.5px solid #000;border:1px solid #999;padding:2px 5px;font-size:6.5pt;font-weight:700;background:#e8e8e8">
-          <span style="font-weight:700;text-transform:uppercase">FINALIZADOR: </span>${bloque.finalizador||''}
-        </td>
-      </tr>
+      <tr><td colspan="${totalValCols+2}" style="border:1px solid #999;padding:2px 5px;font-size:5.5pt;font-weight:700;background:#e8e8e8">FINALIZADOR: ${bloque.finalizador||''}</td></tr>
     </table>`;
   }
 
   const diasHTML = planDias.map(dia => buildDia(dia)).join('');
 
-  const html = `<div class="print-doc">
-    ${header}
-    ${semHeaders}
-    ${diasHTML}
-  </div>`;
+  const area = document.getElementById('print-area');
+  area.innerHTML = `<div id="print-content" style="font-family:Arial,Helvetica,sans-serif;color:#000;background:#fff;width:190mm;padding:0;margin:0">${header}${diasHTML}</div>`;
 
-  document.getElementById('print-area').innerHTML = html;
-  window.print();
+  const content = document.getElementById('print-content');
+  content.style.transform = 'none';
+  content.style.transformOrigin = 'top left';
+
+  requestAnimationFrame(()=>{
+    requestAnimationFrame(()=>{
+      const altoPx  = content.scrollHeight;
+      const anchoPx = content.scrollWidth;
+      const altoMax = 262 * 3.7795;
+      const anchoMax= 190 * 3.7795;
+      const scale   = Math.min(altoMax/altoPx, anchoMax/anchoPx, 1);
+      content.style.transform = `scale(${scale})`;
+      content.style.transformOrigin = 'top left';
+      area.style.height = (altoPx * scale) + 'px';
+      window.print();
+    });
+  });
 }
 
 // ══ INIT — carga datos desde Supabase ══
