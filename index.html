@@ -16,10 +16,10 @@
   --danger: #c0392b; --input-bg: #fafaf9; --input-border: #ddd;
 }
 body { font-family: system-ui, -apple-system, sans-serif; background: var(--main-bg); color: var(--text-primary); height: 100vh; overflow: hidden; }
-.layout { display: flex; height: 100vh; }
+.layout { display: flex; height: 100vh; min-height: 0; }
 
 /* Sidebar */
-.sidebar { width: 220px; min-width: 220px; background: var(--sidebar-bg); display: flex; flex-direction: column; }
+.sidebar { width: 220px; min-width: 220px; background: var(--sidebar-bg); display: flex; flex-direction: column; flex-shrink: 0; }
 .sidebar-logo { padding: 24px 20px 20px; border-bottom: 1px solid var(--sidebar-border); }
 .sidebar-logo-title { font-size: 15px; font-weight: 500; color: #fff; }
 .sidebar-logo-sub { font-size: 11px; color: var(--sidebar-text); margin-top: 2px; }
@@ -32,12 +32,12 @@ body { font-family: system-ui, -apple-system, sans-serif; background: var(--main
 
 /* Main */
 .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
-.tab-content { display: none; flex-direction: column; height: 100%; overflow: hidden; min-height: 0; }
+.tab-content { display: none; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
 .tab-content.active { display: flex; }
 .topbar { padding: 20px 28px 0; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
 .page-title { font-size: 20px; font-weight: 500; }
 .page-sub { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
-.content { flex: 1; padding: 18px 28px; overflow-y: auto; }
+.content { flex: 1; padding: 18px 28px; overflow-y: auto; min-height: 0; }
 
 /* Buttons */
 .btn { border-radius: 7px; font-size: 13px; font-weight: 500; cursor: pointer; padding: 8px 16px; border: none; }
