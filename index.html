@@ -38,6 +38,13 @@ body { font-family: system-ui, -apple-system, sans-serif; background: var(--main
 .page-title { font-size: 20px; font-weight: 500; }
 .page-sub { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
 .content { flex: 1; padding: 18px 28px; overflow-y: auto; min-height: 0; }
+/* Columnas ordenables */
+th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+th.sortable:hover { background: #e8e6e0; }
+th.sortable .sort-arrow { margin-left: 4px; opacity: 0.4; font-size: 10px; }
+th.sortable.asc .sort-arrow::after { content: '▲'; opacity: 1; }
+th.sortable.desc .sort-arrow::after { content: '▼'; opacity: 1; }
+th.sortable:not(.asc):not(.desc) .sort-arrow::after { content: '⇅'; }
 
 /* Buttons */
 .btn { border-radius: 7px; font-size: 13px; font-weight: 500; cursor: pointer; padding: 8px 16px; border: none; }
@@ -383,7 +390,7 @@ tr:hover td { background: #faf9f7; }
     <div id="tab-alumnos" class="tab-content active">
 
       <!-- Vista: listado -->
-      <div id="alumnos-listado">
+      <div id="alumnos-listado" style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden">
         <div class="topbar">
           <div><div class="page-title">Alumnos</div><div class="page-sub" id="alumno-sub">— alumnos registrados</div></div>
           <div style="display:flex;gap:10px">
@@ -403,7 +410,14 @@ tr:hover td { background: #faf9f7; }
           </div>
           <input class="search-input" type="text" id="search-alumnos" placeholder="Buscar por nombre, teléfono..." oninput="renderAlumnos()" />
           <div class="table-wrap"><table>
-            <thead><tr><th>Alumno</th><th>Teléfono</th><th>Edad</th><th>Peso / Altura</th><th>Grupo</th><th>Acciones</th></tr></thead>
+            <thead><tr>
+              <th class="sortable" onclick="sortAlumnos('nombre')">Alumno <span class="sort-arrow"></span></th>
+              <th>Teléfono</th>
+              <th class="sortable" onclick="sortAlumnos('edad')">Edad <span class="sort-arrow"></span></th>
+              <th>Peso / Altura</th>
+              <th class="sortable" onclick="sortAlumnos('grupo')">Grupo <span class="sort-arrow"></span></th>
+              <th>Acciones</th>
+            </tr></thead>
             <tbody id="alumnos-tbody"></tbody>
           </table></div>
         </div>
@@ -1015,6 +1029,26 @@ function closeConfirm(){document.getElementById('confirm-modal').classList.remov
 function ptagGrupo(g){const k=g?g.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''):'';return`<span class="ptag ptag-${k}">${g}</span>`;}
 
 // ══ ALUMNOS ══
+let alumnoSortCol = 'nombre';
+let alumnoSortDir = 'asc';
+
+function sortAlumnos(col){
+  if(alumnoSortCol === col){
+    alumnoSortDir = alumnoSortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    alumnoSortCol = col;
+    alumnoSortDir = 'asc';
+  }
+  // Actualizar clases de los th
+  document.querySelectorAll('#alumnos-listado th.sortable').forEach(th=>{
+    th.classList.remove('asc','desc');
+    if(th.getAttribute('onclick').includes(`'${col}'`)){
+      th.classList.add(alumnoSortDir);
+    }
+  });
+  renderAlumnos();
+}
+
 function badgeClass(g){if(g==='Deportivo')return'badge-deportivo';if(g==='Fuerza')return'badge-fuerza';if(g==='Musculación')return'badge-musculacion';return'badge-none';}
 function updateAlumnoStats(){
   document.getElementById('stat-total').textContent=alumnos.length;
@@ -1026,7 +1060,17 @@ function updateAlumnoStats(){
 function renderAlumnos(){
   const q=(document.getElementById('search-alumnos').value||'').toLowerCase();
   const tbody=document.getElementById('alumnos-tbody');
-  const f=alumnos.filter(a=>(a.nombre+' '+a.apellido).toLowerCase().includes(q)||(a.telefono||'').includes(q));
+  let f=alumnos.filter(a=>(a.nombre+' '+a.apellido).toLowerCase().includes(q)||(a.telefono||'').includes(q));
+
+  // Ordenar
+  f.sort((a,b)=>{
+    let va='', vb='';
+    if(alumnoSortCol==='nombre'){ va=(a.apellido+a.nombre).toLowerCase(); vb=(b.apellido+b.nombre).toLowerCase(); }
+    else if(alumnoSortCol==='edad'){ va=a.edad||0; vb=b.edad||0; return alumnoSortDir==='asc'?va-vb:vb-va; }
+    else if(alumnoSortCol==='grupo'){ va=(a.grupo||'').toLowerCase(); vb=(b.grupo||'').toLowerCase(); }
+    return alumnoSortDir==='asc'?va.localeCompare(vb):vb.localeCompare(va);
+  });
+
   if(!f.length){tbody.innerHTML='<tr><td colspan="6" class="empty">No se encontraron alumnos</td></tr>';updateAlumnoStats();return;}
   tbody.innerHTML=f.map(a=>{
     const nPlanes=(historialPlanes[a.id]||[]).length;
