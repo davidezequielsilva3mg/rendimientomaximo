@@ -2326,12 +2326,12 @@ function imprimirPlan() {
       </tr><tr>`;
       [0,1,2,3].forEach(si=>{
         const s=SEMANAS[si]; const vals=eje.reps[s]||[];
-        for(let i=0;i<N;i++) rows+=`<td style="text-align:center;font-size:5pt;height:8px;border:0.3px solid #bbb;padding:0">${vals[i]||''}</td>`;
+        for(let i=0;i<N;i++) rows+=`<td style="text-align:center;font-size:7pt;font-weight:600;height:13px;border:0.3px solid #bbb;padding:0">${vals[i]||''}</td>`;
       });
       rows += `</tr><tr>`;
       [0,1,2,3].forEach(si=>{
         const s=SEMANAS[si]; const vals=(eje.kgs&&eje.kgs[s])||[];
-        for(let i=0;i<N;i++) rows+=`<td style="text-align:center;font-size:4.5pt;height:8px;border:0.3px solid #bbb;background:#f5f5f5;color:#444;padding:0">${vals[i]?vals[i]+'k':''}</td>`;
+        for(let i=0;i<N;i++) rows+=`<td style="text-align:center;font-size:6pt;height:16px;border:0.3px solid #bbb;background:#f5f5f5;color:#444;padding:0">${vals[i]?vals[i]+'k':''}</td>`;
       });
       rows += `</tr>`;
     });
