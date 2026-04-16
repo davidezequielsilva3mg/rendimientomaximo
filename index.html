@@ -386,7 +386,13 @@ tr:hover td { background: #faf9f7; }
       <div id="alumnos-listado">
         <div class="topbar">
           <div><div class="page-title">Alumnos</div><div class="page-sub" id="alumno-sub">— alumnos registrados</div></div>
-          <button class="btn btn-dark" onclick="openAlumnoModal()">+ Nuevo alumno</button>
+          <div style="display:flex;gap:10px">
+            <label class="btn btn-ghost" style="cursor:pointer" title="Importar desde Excel">
+              📥 Importar Excel
+              <input type="file" id="import-alumnos-input" accept=".xlsx" style="display:none" onchange="importarAlumnos(this)" />
+            </label>
+            <button class="btn btn-dark" onclick="openAlumnoModal()">+ Nuevo alumno</button>
+          </div>
         </div>
         <div class="content">
           <div class="stats-row">
@@ -1331,6 +1337,84 @@ async function deleteAlumno(id){
     delete historialPlanes[id];
     renderAlumnos();
   }
+}
+
+// ══ IMPORTAR ALUMNOS DESDE EXCEL ══
+async function importarAlumnos(input){
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async function(e){
+    try {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:null});
+
+      // Saltar fila de encabezado (fila 0)
+      // Columnas (0-indexed): B=1(nombre) C=2(apellido) E=4(telefono) G=6(mail) H=7(estado) J=9(fecha registro)
+      // Solo importar si col H === "ACTIVO"
+      const nuevos = [];
+      rows.slice(1).forEach(r => {
+        const estado = (r[7]||'').toString().trim().toUpperCase();
+        if(estado !== 'ACTIVO') return;
+        const nombre   = (r[1]||'').toString().trim();
+        const apellido = (r[2]||'').toString().trim();
+        if(!nombre && !apellido) return;
+        nuevos.push({
+          nombre:    nombre,
+          apellido:  apellido,
+          telefono:  (r[4]||'').toString().trim(),
+          mail:      (r[6]||'').toString().trim(),
+          obs:       (r[9]||'').toString().trim() ? 'Registro: '+(r[9]||'').toString().trim() : '',
+        });
+      });
+
+      if(!nuevos.length){
+        alert('No se encontraron alumnos ACTIVOS en el archivo.');
+        input.value=''; return;
+      }
+
+      // Detectar duplicados por nombre+apellido
+      const yaExisten = nuevos.filter(n =>
+        alumnos.some(a =>
+          a.nombre.toLowerCase()===n.nombre.toLowerCase() &&
+          a.apellido.toLowerCase()===n.apellido.toLowerCase()
+        )
+      ).length;
+
+      const msg = `Se encontraron ${nuevos.length} alumnos ACTIVOS.\n` +
+        (yaExisten ? `${yaExisten} ya existen y serán omitidos.\n` : '') +
+        `\n¿Importar?`;
+
+      if(!confirm(msg)){ input.value=''; return; }
+
+      const nuevosAInsertar = nuevos.filter(n =>
+        !alumnos.some(a =>
+          a.nombre.toLowerCase()===n.nombre.toLowerCase() &&
+          a.apellido.toLowerCase()===n.apellido.toLowerCase()
+        )
+      );
+
+      let importados = 0;
+      // Insertar de a lotes de 50
+      for(let i=0; i<nuevosAInsertar.length; i+=50){
+        const lote = nuevosAInsertar.slice(i, i+50);
+        const {data:rows2} = await sb.from('alumnos').insert(lote).select();
+        if(rows2){ rows2.forEach(r=>alumnos.push(r)); importados+=rows2.length; }
+      }
+
+      input.value='';
+      renderAlumnos();
+      toast(`✓ ${importados} alumnos importados`);
+
+    } catch(err){
+      console.error(err);
+      alert('Error al leer el archivo. Asegurate de que sea un .xlsx válido.');
+      input.value='';
+    }
+  };
+  reader.readAsArrayBuffer(file);
 }
 
 // ══ PROFESORES ══
