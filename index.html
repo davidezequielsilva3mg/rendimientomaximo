@@ -2310,11 +2310,10 @@ function imprimirPlan() {
 
 // ══ INIT — carga datos desde Supabase ══
 async function initApp(){
-  // Mostrar loading
   document.body.insertAdjacentHTML('afterbegin',`
     <div id="app-loading" style="position:fixed;inset:0;background:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;gap:16px">
       <div style="font-size:18px;font-weight:500;color:#fff;letter-spacing:.05em">GYMMANAGER</div>
-      <div style="font-size:13px;color:#888">Cargando datos...</div>
+      <div style="font-size:13px;color:#888" id="load-msg">Cargando datos...</div>
       <div style="width:200px;height:2px;background:#333;border-radius:2px;overflow:hidden">
         <div id="load-bar" style="height:100%;background:#fff;width:0%;transition:width .3s"></div>
       </div>
@@ -2322,55 +2321,47 @@ async function initApp(){
 
   const bar = p => { const b=document.getElementById('load-bar'); if(b) b.style.width=p+'%'; };
 
-  try {
-    bar(10);
-    const [{data:a},{data:p},{data:s},{data:e},{data:pl},{data:hp},{data:cfg},{data:ea}] = await Promise.all([
-      sb.from('alumnos').select('*').order('created_at'),
-      sb.from('profesores').select('*').order('created_at'),
-      sb.from('semanas').select('*').order('desde'),
-      sb.from('ejercicios').select('*').order('nombre'),
-      sb.from('planes').select('*').order('created_at'),
-      sb.from('historial_planes').select('*').order('fecha',{ascending:false}),
-      sb.from('configuracion').select('*').limit(1).maybeSingle(),
-      sb.from('ejercicios_activacion').select('*').order('nombre'),
-    ]);
-    bar(80);
+  // Función helper que nunca tira error
+  const q = async (fn) => { try { const {data,error} = await fn(); if(error) console.warn('Supabase error:',error.message); return data||[]; } catch(e){ console.warn('Query falló:',e); return []; } };
+  const qSingle = async (fn) => { try { const {data,error} = await fn(); if(error) console.warn('Supabase error:',error.message); return data||null; } catch(e){ console.warn('Query falló:',e); return null; } };
 
-    alumnos              = a  || [];
-    profesores           = p  || [];
-    semanas              = s  || [];
-    ejercicios           = e  || [];
-    savedPlans           = pl || [];
-    ejerciciosActivacion = ea || [];
+  bar(10);
+  alumnos    = await q(()=>sb.from('alumnos').select('*').order('created_at'));
+  bar(22);
+  profesores = await q(()=>sb.from('profesores').select('*').order('created_at'));
+  bar(34);
+  semanas    = await q(()=>sb.from('semanas').select('*').order('desde'));
+  bar(46);
+  ejercicios = await q(()=>sb.from('ejercicios').select('*').order('nombre'));
+  bar(55);
+  savedPlans = await q(()=>sb.from('planes').select('*').order('created_at'));
+  bar(64);
+  const hp   = await q(()=>sb.from('historial_planes').select('*').order('fecha',{ascending:false}));
+  bar(73);
+  ejerciciosActivacion = await q(()=>sb.from('ejercicios_activacion').select('*').order('nombre'));
+  bar(85);
+  const cfg  = await qSingle(()=>sb.from('configuracion').select('*').limit(1).maybeSingle());
+  bar(95);
 
-    // Config
-    if(cfg?.datos) {
-      gymConfig = cfg.datos;
-      aplicarConfigUI();
-    }
+  // Historial agrupado por alumno
+  historialPlanes = {};
+  hp.forEach(h=>{
+    if(!historialPlanes[h.alumno_id]) historialPlanes[h.alumno_id]=[];
+    historialPlanes[h.alumno_id].push(h);
+  });
 
-    // Agrupar historial por alumno_id
-    historialPlanes = {};
-    (hp||[]).forEach(h=>{
-      if(!historialPlanes[h.alumno_id]) historialPlanes[h.alumno_id]=[];
-      historialPlanes[h.alumno_id].push(h);
-    });
+  // Config
+  if(cfg?.datos){ gymConfig=cfg.datos; aplicarConfigUI(); }
 
-    bar(100);
-    initNextTId();
+  initNextTId();
+  bar(100);
 
-  } catch(err){
-    console.error('Error cargando datos:', err);
-  }
-
-  
-  // Ocultar loading
   setTimeout(()=>{
     const el=document.getElementById('app-loading');
     if(el) el.remove();
     renderAlumnos();
     renderProfesores();
-  }, 400);
+  }, 300);
 }
 
 initApp();
