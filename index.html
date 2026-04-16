@@ -1351,9 +1351,7 @@ async function importarAlumnos(input){
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:null});
 
-      // Saltar fila de encabezado (fila 0)
-      // Columnas (0-indexed): B=1(nombre) C=2(apellido) E=4(telefono) G=6(mail) H=7(estado) J=9(fecha registro)
-      // Solo importar si col H === "ACTIVO"
+      // Columnas (0-indexed): B=1 C=2 E=4 G=6 H=7(estado) J=9
       const nuevos = [];
       rows.slice(1).forEach(r => {
         const estado = (r[7]||'').toString().trim().toUpperCase();
@@ -1362,11 +1360,10 @@ async function importarAlumnos(input){
         const apellido = (r[2]||'').toString().trim();
         if(!nombre && !apellido) return;
         nuevos.push({
-          nombre:    nombre,
-          apellido:  apellido,
-          telefono:  (r[4]||'').toString().trim(),
-          mail:      (r[6]||'').toString().trim(),
-          obs:       (r[9]||'').toString().trim() ? 'Registro: '+(r[9]||'').toString().trim() : '',
+          nombre,
+          apellido,
+          telefono: (r[4]||'').toString().trim(),
+          obs:      (r[9]||'').toString().trim() ? 'Registro: '+(r[9]||'').toString().trim() : '',
         });
       });
 
@@ -1375,7 +1372,6 @@ async function importarAlumnos(input){
         input.value=''; return;
       }
 
-      // Detectar duplicados por nombre+apellido
       const yaExisten = nuevos.filter(n =>
         alumnos.some(a =>
           a.nombre.toLowerCase()===n.nombre.toLowerCase() &&
@@ -1396,21 +1392,23 @@ async function importarAlumnos(input){
         )
       );
 
-      let importados = 0;
       // Insertar de a lotes de 50
       for(let i=0; i<nuevosAInsertar.length; i+=50){
         const lote = nuevosAInsertar.slice(i, i+50);
-        const {data:rows2} = await sb.from('alumnos').insert(lote).select();
-        if(rows2){ rows2.forEach(r=>alumnos.push(r)); importados+=rows2.length; }
+        await sb.from('alumnos').insert(lote);
       }
+
+      // Recargar todos los alumnos desde Supabase
+      const {data:todos} = await sb.from('alumnos').select('*').order('created_at').limit(2000);
+      alumnos = todos || [];
 
       input.value='';
       renderAlumnos();
-      toast(`✓ ${importados} alumnos importados`);
+      toast(`✓ ${nuevosAInsertar.length} alumnos importados`);
 
     } catch(err){
       console.error(err);
-      alert('Error al leer el archivo. Asegurate de que sea un .xlsx válido.');
+      alert('Error al leer el archivo: ' + err.message);
       input.value='';
     }
   };
@@ -2422,7 +2420,7 @@ async function initApp(){
   const qSingle = async (fn) => { try { const {data,error} = await fn(); if(error) console.warn('Supabase error:',error.message); return data||null; } catch(e){ console.warn('Query falló:',e); return null; } };
 
   bar(10);
-  alumnos    = await q(()=>sb.from('alumnos').select('*').order('created_at'));
+  alumnos    = await q(()=>sb.from('alumnos').select('*').order('created_at').limit(2000));
   bar(22);
   profesores = await q(()=>sb.from('profesores').select('*').order('created_at'));
   bar(34);
