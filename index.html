@@ -961,16 +961,17 @@ async function guardarConfig(){
   gymConfig.email     = document.getElementById('cfg-email').value.trim();
   gymConfig.instagram = document.getElementById('cfg-instagram').value.trim();
 
-  // Guardar en Supabase
-  const {data:existing} = await sb.from('configuracion').select('id').limit(1).single().catch(()=>({data:null}));
-  if(existing){
+  // Buscar si ya existe una fila de config
+  const {data:existing} = await sb.from('configuracion').select('id').limit(1).maybeSingle();
+
+  if(existing?.id){
     await sb.from('configuracion').update({datos: gymConfig}).eq('id', existing.id);
   } else {
     await sb.from('configuracion').insert({datos: gymConfig});
   }
 
   aplicarConfigUI();
-  toast('Configuración guardada');
+  toast('Configuración guardada ✓');
 }
 
 // ══ UTILS ══
