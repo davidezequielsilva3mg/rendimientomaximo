@@ -2304,16 +2304,33 @@ function imprimirPlan() {
     </tr>
   </table>`;
 
-  function buildDia(dia) {
+  function buildDia(dia, esPrimerDia) {
     const bloque = dia.bloques[0];
-    const semRow1 = `<td colspan="2" style="border:none;background:#fff;width:18px"></td>` +
-      ['S1','S2','S3','S4'].map((s,si)=>
-        `<td colspan="${N}" style="border:1px solid #999;padding:1px;text-align:center;font-size:5pt;font-weight:700;background:#e8e8e8">SEMANA ${si+1}</td>`
-      ).join('');
+
+    // Activaciones del día (3 campos)
+    const actDia = Array.isArray(dia.activacion) ? dia.activacion : [];
+    const actCells = [0,1,2].map(i => {
+      const nombre = actDia[i]?.nombre || '—';
+      return `<td style="border:1px solid #555;padding:1px 4px;font-size:5pt;font-weight:700;background:#444;color:#fff;white-space:nowrap">ACT. ${i+1}</td>
+              <td style="border:1px solid #555;padding:1px 4px;font-size:5.5pt;color:#fff;background:#333">${nombre}</td>`;
+    }).join('');
+
+    // Borde grueso entre semanas
+    const BORDER_SEM = '2px solid #555';
+
+    // Fila SEMANA 1/2/3/4 — solo en el primer día
+    const semRow1 = esPrimerDia
+      ? `<td colspan="2" style="border:none;background:#fff"></td>` +
+        [0,1,2,3].map(si=>
+          `<td colspan="${N}" style="border:1px solid #999;${si>0?'border-left:'+BORDER_SEM+';':''}padding:1px;text-align:center;font-size:5pt;font-weight:700;background:#e8e8e8">SEMANA ${si+1}</td>`
+        ).join('')
+      : null;
+
+    // Fila S1-S5 — en todos los días
     const semRow2 = `<td colspan="2" style="border:none;background:#fff"></td>` +
       [0,1,2,3].map(si=>
         Array.from({length:N},(_,i)=>
-          `<td style="text-align:center;font-size:4.5pt;font-weight:700;background:${SH_COLORS[si]};border:0.3px solid #bbb;padding:0">S${i+1}</td>`
+          `<td style="text-align:center;font-size:4.5pt;font-weight:700;background:${SH_COLORS[si]};border:0.3px solid #bbb;${i===0&&si>0?'border-left:'+BORDER_SEM+';':''}padding:0">S${i+1}</td>`
         ).join('')
       ).join('');
 
@@ -2327,27 +2344,30 @@ function imprimirPlan() {
       </tr><tr>`;
       [0,1,2,3].forEach(si=>{
         const s=SEMANAS[si]; const vals=eje.reps[s]||[];
-        for(let i=0;i<N;i++) rows+=`<td style="text-align:center;font-size:7pt;font-weight:600;height:13px;border:0.3px solid #bbb;padding:0">${vals[i]||''}</td>`;
+        for(let i=0;i<N;i++) rows+=`<td style="text-align:center;font-size:7pt;font-weight:600;height:13px;border:0.3px solid #bbb;${i===0&&si>0?'border-left:'+BORDER_SEM+';':''}padding:0">${vals[i]||''}</td>`;
       });
       rows += `</tr><tr>`;
       [0,1,2,3].forEach(si=>{
         const s=SEMANAS[si]; const vals=(eje.kgs&&eje.kgs[s])||[];
-        for(let i=0;i<N;i++) rows+=`<td style="text-align:center;font-size:6pt;height:16px;border:0.3px solid #bbb;background:#f5f5f5;color:#444;padding:0">${vals[i]?vals[i]+'k':''}</td>`;
+        for(let i=0;i<N;i++) rows+=`<td style="text-align:center;font-size:6pt;height:16px;border:0.3px solid #bbb;${i===0&&si>0?'border-left:'+BORDER_SEM+';':''}background:#f5f5f5;color:#444;padding:0">${vals[i]?vals[i]+'k':''}</td>`;
       });
       rows += `</tr>`;
     });
 
     return `
     <table style="width:100%;border-collapse:collapse;margin-bottom:1px;table-layout:fixed">
-      <tr><td colspan="${totalValCols+2}" style="background:#222;color:#fff;font-size:6pt;font-weight:700;padding:1px 5px;border:1px solid #000">DÍA ${dia.num}</td></tr>
-      <tr>${semRow1}</tr>
+      <tr>
+        <td colspan="2" style="background:#222;color:#fff;font-size:6pt;font-weight:700;padding:1px 5px;border:1px solid #000;white-space:nowrap">DÍA ${dia.num}</td>
+        ${actCells}
+      </tr>
+      ${esPrimerDia ? `<tr>${semRow1}</tr>` : ''}
       <tr>${semRow2}</tr>
       ${rows}
       <tr><td colspan="${totalValCols+2}" style="border:1px solid #999;padding:2px 5px;font-size:5.5pt;font-weight:700;background:#e8e8e8">FINALIZADOR: ${bloque.finalizador||''}</td></tr>
     </table>`;
   }
 
-  const diasHTML = planDias.map(dia => buildDia(dia)).join('');
+  const diasHTML = planDias.map((dia, i) => buildDia(dia, i===0)).join('');
 
   const area = document.getElementById('print-area');
   area.innerHTML = `<div id="print-content" style="font-family:Arial,Helvetica,sans-serif;color:#000;background:#fff;width:190mm;padding:0;margin:0">${header}${diasHTML}</div>`;
