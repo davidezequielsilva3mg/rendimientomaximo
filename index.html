@@ -2280,27 +2280,22 @@ function imprimirPlan() {
   const N = 5;
   const totalValCols = N * 4;
 
-  const actDias = planDias.map((dia,i) =>
-    `<td style="border:1px solid #000;padding:1px 3px;font-size:5.5pt;font-weight:700;text-transform:uppercase;text-align:center;background:#e8e8e8">ACT. DÍA ${dia.num}</td>
-     <td style="border:1px solid #000;padding:1px 4px;font-size:5.5pt">${acts[i].join(' / ')||'—'}</td>`
-  ).join('');
-
   const header = `
   <table style="width:100%;border-collapse:collapse;margin-bottom:1px;table-layout:fixed">
     <tr>
       <td rowspan="3" style="width:60px;min-width:60px;border:1.5px solid #000;text-align:center;vertical-align:middle;padding:2px">${logoHTML}</td>
       <td colspan="2" style="border:1px solid #000;padding:1px 4px;font-size:5.5pt;font-weight:700;text-transform:uppercase;text-align:center;background:#e8e8e8">PROFESOR</td>
-      <td colspan="${planDias.length*2}" style="border:1px solid #000;padding:1px 4px;font-size:5.5pt;font-weight:700;text-align:center">ALUMNO: ${alumno||''}</td>
+      <td colspan="4" style="border:1px solid #000;padding:1px 4px;font-size:5.5pt;font-weight:700;text-align:center">ALUMNO: ${alumno||''}</td>
     </tr>
     <tr>
       <td style="border:1px solid #000;padding:1px 3px;font-size:5.5pt;font-weight:700;background:#e8e8e8;text-align:right">GRUPO</td>
       <td style="border:1px solid #000;padding:1px 4px;font-size:5.5pt">${grupo||''}</td>
-      ${actDias}
-    </tr>
-    <tr>
       <td style="border:1px solid #000;padding:1px 3px;font-size:5.5pt;font-weight:700;background:#e8e8e8;text-align:right">FASE/SUB</td>
       <td style="border:1px solid #000;padding:1px 4px;font-size:5.5pt">${[fase,sub].filter(Boolean).join(' · ')||''}</td>
-      <td colspan="${planDias.length*2}" style="border:1px solid #000;padding:1px 4px;font-size:5.5pt;font-weight:700;background:#e8e8e8">FREC: ${obj||''}</td>
+      <td colspan="2" style="border:1px solid #000;padding:1px 4px;font-size:5.5pt;font-weight:700;background:#e8e8e8">FREC: ${obj||''}</td>
+    </tr>
+    <tr>
+      <td colspan="5" style="border:1px solid #000;padding:1px 4px;font-size:5.5pt;color:#555;text-align:center">Rendimiento Máximo${gymConfig.direccion?' · '+gymConfig.direccion:''}</td>
     </tr>
   </table>`;
 
