@@ -441,7 +441,11 @@ tr:hover td { background: #faf9f7; }
               <div style="font-size:11px;color:var(--text-muted)" id="crono-semana-rango">—</div>
             </div>
             <button class="btn btn-ghost" style="padding:6px 12px;font-size:12px" onclick="navegarSemana(1)">Semana siguiente →</button>
-            <button class="btn btn-dark" style="padding:6px 12px;font-size:12px;margin-left:auto" onclick="guardarSemana()">Guardar semana</button>
+            <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+              <button class="btn btn-ghost" style="padding:6px 12px;font-size:12px" onclick="copiarSemana()" title="Copia los turnos de esta semana">📋 Copiar semana</button>
+              <button class="btn btn-ghost" id="btn-pegar-semana" style="padding:6px 12px;font-size:12px;display:none" onclick="pegarSemana()" title="Pega los turnos copiados en esta semana">📌 Pegar semana</button>
+              <button class="btn btn-dark" style="padding:6px 12px;font-size:12px" onclick="guardarSemana()">Guardar semana</button>
+            </div>
           </div>
           <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Hacé clic en <strong>+</strong> para asignar un profesor. Los cambios se guardan al presionar <strong>Guardar semana</strong>.</div>
           <div class="crono-grid"><table class="crono-table" id="crono-table"></table></div>
@@ -1586,6 +1590,72 @@ async function guardarSemana(){
   await sb.from('semanas').upsert({key:registro.key,desde:registro.desde,hasta:registro.hasta,turnos:registro.turnos},{onConflict:'key'});
   toast('Semana guardada');
   updateProfStats();
+}
+
+// ── Copiar / Pegar semana ──
+let semanaCopiada = null; // guarda los turnos copiados
+
+function copiarSemana(){
+  const turnosActivos = turnosActuales();
+  if(!turnosActivos.length){
+    toast('Esta semana no tiene turnos para copiar', '#c0392b');
+    return;
+  }
+  // Guardar copia profunda de los turnos (sin IDs, para que se recreen al pegar)
+  semanaCopiada = JSON.parse(JSON.stringify(turnosActivos)).map(t => ({
+    dia: t.dia,
+    hora: t.hora,
+    horaFin: t.horaFin,
+    profId: t.profId
+  }));
+  // Mostrar botón pegar
+  document.getElementById('btn-pegar-semana').style.display = 'block';
+  toast(`✓ ${semanaCopiada.length} turnos copiados — navegá a otra semana y pegá`);
+}
+
+async function pegarSemana(){
+  if(!semanaCopiada?.length){
+    toast('No hay semana copiada', '#c0392b');
+    return;
+  }
+  const {key} = getSemanaActual();
+  const sActual = semanas.find(s => s.key === key);
+  const turnosExistentes = sActual?.turnos?.length || 0;
+
+  const msg = turnosExistentes
+    ? `Esta semana ya tiene ${turnosExistentes} turno${turnosExistentes!==1?'s':''} cargados.\n¿Reemplazarlos con los ${semanaCopiada.length} turnos copiados?`
+    : `¿Pegar ${semanaCopiada.length} turno${semanaCopiada.length!==1?'s':''} en esta semana?`;
+
+  if(!confirm(msg)) return;
+
+  // Crear nuevos turnos con IDs frescos
+  const nuevosTurnos = semanaCopiada.map(t => ({
+    ...t,
+    id: nextTId++
+  }));
+
+  const {lunes, sabado} = getSemanaActual();
+  const registro = {
+    key,
+    desde: lunes.toISOString().split('T')[0],
+    hasta: sabado.toISOString().split('T')[0],
+    turnos: nuevosTurnos
+  };
+
+  const idx = semanas.findIndex(s => s.key === key);
+  if(idx >= 0) semanas[idx] = registro;
+  else semanas.push(registro);
+
+  await sb.from('semanas').upsert({
+    key: registro.key,
+    desde: registro.desde,
+    hasta: registro.hasta,
+    turnos: registro.turnos
+  }, {onConflict: 'key'});
+
+  renderCronograma();
+  updateProfStats();
+  toast(`✓ ${nuevosTurnos.length} turnos pegados — recordá guardar la semana`);
 }
 
 async function guardarTodasLasSemanas(){
