@@ -539,6 +539,7 @@ tr:hover td { background: #faf9f7; }
               📥 Importar Excel
               <input type="file" id="import-excel-input" accept=".xlsx" style="display:none" onchange="importarExcel(this)" />
             </label>
+            <button class="btn btn-ghost" style="color:#c0392b;border-color:#c0392b" onclick="borrarTodosEjercicios()">🗑 Borrar todos</button>
             <button class="btn btn-dark" onclick="openEjeModal()">+ Nuevo ejercicio</button>
           </div>
         </div>
@@ -565,6 +566,7 @@ tr:hover td { background: #faf9f7; }
               📥 Importar Excel
               <input type="file" id="import-act-excel-input" accept=".xlsx" style="display:none" onchange="importarExcelActivacion(this)" />
             </label>
+            <button class="btn btn-ghost" style="color:#c0392b;border-color:#c0392b" onclick="borrarTodosEjerciciosActivacion()">🗑 Borrar todos</button>
             <button class="btn btn-dark" onclick="openActEjeModal()">+ Nuevo ejercicio</button>
           </div>
         </div>
@@ -2090,6 +2092,34 @@ function deleteEjercicio(id){
     renderEjercicios();
     toast('Ejercicio eliminado');
   });
+}
+
+async function borrarTodosEjercicios(){
+  if(!ejercicios.length){ toast('No hay ejercicios para borrar','#c0392b'); return; }
+  showConfirm(
+    '¿Borrar todos los ejercicios?',
+    `Se eliminarán ${ejercicios.length} ejercicios permanentemente. Esta acción no se puede deshacer.`,
+    async () => {
+      await sb.from('ejercicios').delete().neq('id', 0);
+      ejercicios = [];
+      renderEjercicios();
+      toast('Todos los ejercicios fueron eliminados');
+    }
+  );
+}
+
+async function borrarTodosEjerciciosActivacion(){
+  if(!ejerciciosActivacion.length){ toast('No hay ejercicios para borrar','#c0392b'); return; }
+  showConfirm(
+    '¿Borrar todos los ejercicios de activación?',
+    `Se eliminarán ${ejerciciosActivacion.length} ejercicios permanentemente. Esta acción no se puede deshacer.`,
+    async () => {
+      await sb.from('ejercicios_activacion').delete().neq('id', 0);
+      ejerciciosActivacion = [];
+      renderEjerciciosActivacion();
+      toast('Todos los ejercicios de activación fueron eliminados');
+    }
+  );
 }
 
 // ══ AUTOCOMPLETE ══
