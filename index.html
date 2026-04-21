@@ -503,6 +503,10 @@ tr:hover td { background: #faf9f7; }
           <div><div class="assign-mini-label">Grupo</div><select class="assign-select" id="sel-grupo" onchange="updateAssignBadge()"><option value="">— Grupo —</option><option>Fuerza</option><option>Deportivo</option><option>Musculación</option></select></div>
           <div><div class="assign-mini-label">Fase</div><select class="assign-select" id="sel-fase" onchange="updateAssignBadge()"><option value="">— Fase —</option><option>Fase 1</option><option>Fase 2</option><option>Fase 3</option><option>Fase 4</option><option>Fase 5</option></select></div>
           <div><div class="assign-mini-label">Subfase</div><select class="assign-select" id="sel-subfase" onchange="updateAssignBadge()"><option value="">— Subfase —</option><option>Subfase A</option><option>Subfase B</option><option>Subfase C</option></select></div>
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <div class="assign-mini-label">— ó — Nombre libre</div>
+            <input class="assign-select" id="sel-nombre-libre" type="text" placeholder="Ej: Plan Juan verano" style="min-width:180px" oninput="updateAssignBadge()" />
+          </div>
           <div class="assign-badge" id="assign-badge">Sin asignar</div>
         </div>
         <div class="plan-editor-content" id="plan-editor-content">
@@ -1780,7 +1784,20 @@ function toggleDetalle(id){
 }
 
 // ══ PLANES — EDITOR ══
-function updateAssignBadge(){const g=document.getElementById('sel-grupo').value,f=document.getElementById('sel-fase').value,s=document.getElementById('sel-subfase').value,b=document.getElementById('assign-badge');if(g||f||s){b.textContent=[g,f,s].filter(Boolean).join(' · ');b.className='assign-badge saved';}else{b.textContent='Sin asignar';b.className='assign-badge';}}
+function updateAssignBadge(){
+  const g=document.getElementById('sel-grupo').value;
+  const f=document.getElementById('sel-fase').value;
+  const s=document.getElementById('sel-subfase').value;
+  const nl=document.getElementById('sel-nombre-libre').value.trim();
+  const b=document.getElementById('assign-badge');
+  if(nl){
+    b.textContent=nl; b.className='assign-badge saved';
+  } else if(g||f||s){
+    b.textContent=[g,f,s].filter(Boolean).join(' · '); b.className='assign-badge saved';
+  } else {
+    b.textContent='Sin asignar'; b.className='assign-badge';
+  }
+}
 
 function renderDias(){
   const c=document.getElementById('dias-container');c.innerHTML='';
@@ -1872,10 +1889,34 @@ function eliminarEjeDelPlan(dn,bid,eid){
 }
 
 async function guardarPlan(){
-  const g=document.getElementById('sel-grupo').value,f=document.getElementById('sel-fase').value,s=document.getElementById('sel-subfase').value;
-  if(!g||!f||!s){toast('Seleccioná grupo, fase y subfase','#c0392b');return;}
-  const plan={grupo:g,fase:f,subfase:s,objetivo:document.getElementById('meta-objetivo').value,plan_num:document.getElementById('meta-plan').value,nombre:document.getElementById('meta-nombre').value,dias:JSON.parse(JSON.stringify(planDias)),fecha:new Date().toLocaleDateString('es-AR')};
-  const ei=savedPlans.findIndex(p=>p.grupo===g&&p.fase===f&&p.subfase===s);
+  const g=document.getElementById('sel-grupo').value;
+  const f=document.getElementById('sel-fase').value;
+  const s=document.getElementById('sel-subfase').value;
+  const nl=document.getElementById('sel-nombre-libre').value.trim();
+
+  // Necesita nombre libre O los tres campos de grupo/fase/subfase
+  if(!nl && (!g||!f||!s)){
+    toast('Completá Grupo+Fase+Subfase, o escribí un nombre libre','#c0392b');
+    return;
+  }
+
+  const plan={
+    grupo: nl ? '' : g,
+    fase:  nl ? '' : f,
+    subfase: nl ? '' : s,
+    nombre_libre: nl,
+    objetivo: document.getElementById('meta-objetivo').value,
+    plan_num: document.getElementById('meta-plan').value,
+    nombre: document.getElementById('meta-nombre').value,
+    dias: JSON.parse(JSON.stringify(planDias)),
+    fecha: new Date().toLocaleDateString('es-AR')
+  };
+
+  // Buscar si ya existe (por nombre libre o por grupo/fase/subfase)
+  const ei = nl
+    ? savedPlans.findIndex(p=>p.nombre_libre===nl)
+    : savedPlans.findIndex(p=>p.grupo===g&&p.fase===f&&p.subfase===s&&!p.nombre_libre);
+
   if(ei>=0){
     await sb.from('planes').update(plan).eq('id',savedPlans[ei].id);
     savedPlans[ei]={...savedPlans[ei],...plan};
@@ -1888,26 +1929,82 @@ async function guardarPlan(){
   renderSavedInEditor();renderBiblioteca();
 }
 
+function planDisplayName(p){
+  return p.nombre_libre || [p.grupo,p.fase,p.subfase].filter(Boolean).join(' · ') || 'Sin nombre';
+}
+
 function renderSavedInEditor(){
   const g=document.getElementById('saved-plans-grid');
   if(!savedPlans.length){g.innerHTML='<div style="color:var(--text-muted);font-size:13px">Todavía no guardaste ningún plan.</div>';return;}
-  g.innerHTML=savedPlans.map((p,i)=>`<div class="saved-plan-card" onclick="cargarPlan(${i})"><div class="saved-plan-top"><div class="saved-plan-name">${p.grupo} · ${p.fase} · ${p.subfase}</div><button class="del-plan-btn" onclick="event.stopPropagation();eliminarPlan(${i})">×</button></div><div class="saved-plan-tags">${ptagGrupo(p.grupo)}<span class="ptag ptag-fase">${p.fase}</span><span class="ptag ptag-sub">${p.subfase}</span></div><div class="saved-plan-date">${p.objetivo?'Obj: '+p.objetivo+' · ':''}${p.fecha||''}</div></div>`).join('');
+  g.innerHTML=savedPlans.map((p,i)=>`<div class="saved-plan-card" onclick="cargarPlan(${i})">
+    <div class="saved-plan-top">
+      <div class="saved-plan-name">${planDisplayName(p)}</div>
+      <button class="del-plan-btn" onclick="event.stopPropagation();eliminarPlan(${i})">×</button>
+    </div>
+    <div class="saved-plan-tags">
+      ${p.nombre_libre ? `<span class="ptag" style="background:#e8f0fb;color:#2c5aa0">📝 Personalizado</span>` : `${ptagGrupo(p.grupo)}<span class="ptag ptag-fase">${p.fase}</span><span class="ptag ptag-sub">${p.subfase}</span>`}
+    </div>
+    <div class="saved-plan-date">${p.objetivo?'Obj: '+p.objetivo+' · ':''}${p.fecha||''}</div>
+  </div>`).join('');
 }
 
 function renderBiblioteca(){
-  const fg=document.getElementById('filter-grupo').value,ff=document.getElementById('filter-fase').value,fs=document.getElementById('filter-subfase').value;
-  const filt=savedPlans.filter(p=>(!fg||p.grupo===fg)&&(!ff||p.fase===ff)&&(!fs||p.subfase===fs));
+  const fg=document.getElementById('filter-grupo').value;
+  const ff=document.getElementById('filter-fase').value;
+  const fs=document.getElementById('filter-subfase').value;
+  const filt=savedPlans.filter(p=>{
+    if(p.nombre_libre) return true; // los planes libres siempre aparecen
+    return(!fg||p.grupo===fg)&&(!ff||p.fase===ff)&&(!fs||p.subfase===fs);
+  });
   document.getElementById('browser-count').textContent=filt.length+' plan'+(filt.length!==1?'es':'');
   const g=document.getElementById('browser-grid');
   if(!filt.length){g.innerHTML='<div class="browser-empty">No hay planes guardados con esos filtros.</div>';return;}
-  g.innerHTML=filt.map(p=>{const ri=savedPlans.indexOf(p);return`<div class="browser-card"><div class="browser-card-top"><div class="browser-card-title">${p.grupo} · ${p.fase} · ${p.subfase}</div></div><div class="browser-card-tags">${ptagGrupo(p.grupo)}<span class="ptag ptag-fase">${p.fase}</span><span class="ptag ptag-sub">${p.subfase}</span></div><div class="browser-card-meta">${p.objetivo?'Objetivo: '+p.objetivo+'<br>':''}Guardado: ${p.fecha||'—'}</div><div class="browser-card-actions"><button class="act-btn" onclick="imprimirPlanDirecto(${ri})">🖨 Imprimir</button><button class="act-btn" onclick="cargarPlan(${ri})">Editar</button><button class="act-btn del" onclick="eliminarPlan(${ri})">Eliminar</button></div></div>`;}).join('');
+  g.innerHTML=filt.map(p=>{const ri=savedPlans.indexOf(p);return`<div class="browser-card">
+    <div class="browser-card-top"><div class="browser-card-title">${planDisplayName(p)}</div></div>
+    <div class="browser-card-tags">
+      ${p.nombre_libre ? `<span class="ptag" style="background:#e8f0fb;color:#2c5aa0">📝 Personalizado</span>` : `${ptagGrupo(p.grupo)}<span class="ptag ptag-fase">${p.fase}</span><span class="ptag ptag-sub">${p.subfase}</span>`}
+    </div>
+    <div class="browser-card-meta">${p.objetivo?'Objetivo: '+p.objetivo+'<br>':''}Guardado: ${p.fecha||'—'}</div>
+    <div class="browser-card-actions">
+      <button class="act-btn" onclick="imprimirPlanDirecto(${ri})">🖨 Imprimir</button>
+      <button class="act-btn" onclick="cargarPlan(${ri})">Editar</button>
+      <button class="act-btn del" onclick="eliminarPlan(${ri})">Eliminar</button>
+    </div>
+  </div>`;}).join('');
 }
 
-function cargarPlan(idx){showConfirm('¿Cargar este plan?','Se reemplazará el plan en pantalla. Los cambios no guardados se perderán.',()=>{const p=savedPlans[idx];planDias=JSON.parse(JSON.stringify(p.dias));document.getElementById('sel-grupo').value=p.grupo||'';document.getElementById('sel-fase').value=p.fase||'';document.getElementById('sel-subfase').value=p.subfase||'';document.getElementById('meta-objetivo').value=p.objetivo||'';document.getElementById('meta-plan').value=p.plan_num||'';document.getElementById('meta-nombre').value=p.nombre||'';updateAssignBadge();switchPlanesSubtab('editor');renderDias();document.getElementById('plan-editor-content').scrollTop=0;toast('Plan cargado');});}
+function cargarPlan(idx){
+  showConfirm('¿Cargar este plan?','Se reemplazará el plan en pantalla. Los cambios no guardados se perderán.',()=>{
+    const p=savedPlans[idx];
+    planDias=JSON.parse(JSON.stringify(p.dias));
+    document.getElementById('sel-grupo').value=p.grupo||'';
+    document.getElementById('sel-fase').value=p.fase||'';
+    document.getElementById('sel-subfase').value=p.subfase||'';
+    document.getElementById('sel-nombre-libre').value=p.nombre_libre||'';
+    document.getElementById('meta-objetivo').value=p.objetivo||'';
+    document.getElementById('meta-plan').value=p.plan_num||'';
+    document.getElementById('meta-nombre').value=p.nombre||'';
+    updateAssignBadge();
+    switchPlanesSubtab('editor');
+    renderDias();
+    document.getElementById('plan-editor-content').scrollTop=0;
+    toast('Plan cargado');
+  });
+}
 
 function eliminarPlan(idx){showConfirm('¿Eliminar este plan?','Esta acción no se puede deshacer.',async()=>{await sb.from('planes').delete().eq('id',savedPlans[idx].id);savedPlans.splice(idx,1);renderSavedInEditor();renderBiblioteca();toast('Plan eliminado');});}
 
-function confirmarNuevoPlan(){showConfirm('¿Nuevo plan?','Se cargará el template base. Los cambios no guardados se perderán.',()=>{planDias=TPL();['sel-grupo','sel-fase','sel-subfase'].forEach(id=>document.getElementById(id).value='');['meta-objetivo','meta-plan','meta-nombre'].forEach(id=>document.getElementById(id).value='');updateAssignBadge();renderDias();document.getElementById('plan-editor-content').scrollTop=0;});}
+function confirmarNuevoPlan(){
+  showConfirm('¿Nuevo plan?','Se cargará el template base. Los cambios no guardados se perderán.',()=>{
+    planDias=TPL();
+    ['sel-grupo','sel-fase','sel-subfase'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('sel-nombre-libre').value='';
+    ['meta-objetivo','meta-plan','meta-nombre'].forEach(id=>document.getElementById(id).value='');
+    updateAssignBadge();
+    renderDias();
+    document.getElementById('plan-editor-content').scrollTop=0;
+  });
+}
 
 // ══ EJERCICIOS DE ACTIVACIÓN ══
 let ejerciciosActivacion = [], editActEjeId = null;
