@@ -388,7 +388,6 @@ tr:hover td { background: #faf9f7; }
             <thead><tr>
               <th class="sortable" onclick="sortAlumnos('nombre')">Alumno <span class="sort-arrow"></span></th>
               <th>Teléfono</th>
-              <th class="sortable" onclick="sortAlumnos('fecha_inscripcion')">Inscripción <span class="sort-arrow"></span></th>
               <th class="sortable" onclick="sortAlumnos('estado')">Estado <span class="sort-arrow"></span></th>
               <th class="sortable" onclick="sortAlumnos('grupo')">Grupo <span class="sort-arrow"></span></th>
               <th>Acciones</th>
@@ -870,7 +869,8 @@ function switchTab(tab,el){
   document.getElementById('tab-'+tab).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   if(el)el.classList.add('active');
-  if(tab==='planes'){renderDias();renderSavedInEditor();renderBiblioteca();}
+  if(tab==='planes'){switchPlanesSubtab('editor');renderDias();renderSavedInEditor();renderBiblioteca();}
+  if(tab==='alumnos' && perfilAlumnoId){ volverListadoAlumnos(); }
   if(tab==='config'){cargarFormConfig();}
 }
 function switchSubtabProf(tab,el){
@@ -1051,7 +1051,6 @@ function renderAlumnos(){
     return`<tr>
       <td><div class="avatar-cell"><div class="avatar">${initials(a.nombre,a.apellido)}</div><div><div class="name-main">${a.nombre} ${a.apellido}</div></div></div></td>
       <td>${a.telefono||'—'}</td>
-      <td style="font-size:12px">${fechaStr}</td>
       <td><span class="badge ${badgeEstado(estado)}">${estado}</span></td>
       <td><span class="badge ${badgeClass(a.grupo)}">${a.grupo||'Sin grupo'}</span></td>
       <td><div class="row-actions">
