@@ -93,6 +93,9 @@ tr:hover td { background: #faf9f7; }
 .badge-fuerza { background: #fff0e0; color: #a05a00; }
 .badge-musculacion { background: #ede8f8; color: #5b35a0; }
 .badge-none { background: #f0f0f0; color: #999; }
+.badge-activo { background: #e8f4e8; color: #2d6a2d; }
+.badge-suspendido { background: #fff3cd; color: #856404; }
+.badge-deudor { background: #fce8e8; color: #c0392b; }
 
 /* Cronograma */
 .crono-grid { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px; overflow: auto; max-height: calc(100vh - 260px); }
@@ -385,8 +388,8 @@ tr:hover td { background: #faf9f7; }
             <thead><tr>
               <th class="sortable" onclick="sortAlumnos('nombre')">Alumno <span class="sort-arrow"></span></th>
               <th>Teléfono</th>
-              <th class="sortable" onclick="sortAlumnos('edad')">Edad <span class="sort-arrow"></span></th>
-              <th>Peso / Altura</th>
+              <th class="sortable" onclick="sortAlumnos('fecha_inscripcion')">Inscripción <span class="sort-arrow"></span></th>
+              <th class="sortable" onclick="sortAlumnos('estado')">Estado <span class="sort-arrow"></span></th>
               <th class="sortable" onclick="sortAlumnos('grupo')">Grupo <span class="sort-arrow"></span></th>
               <th>Acciones</th>
             </tr></thead>
@@ -722,6 +725,14 @@ tr:hover td { background: #faf9f7; }
       <div class="form-group form-full"><label class="form-label">Dirección</label><input class="form-input" id="af-direccion" type="text" placeholder="Calle Falsa 123" /></div>
       <div class="form-group"><label class="form-label">Peso (kg)</label><input class="form-input" id="af-peso" type="number" placeholder="70" /></div>
       <div class="form-group"><label class="form-label">Altura (cm)</label><input class="form-input" id="af-altura" type="number" placeholder="175" /></div>
+      <div class="form-group"><label class="form-label">Fecha de inscripción</label><input class="form-input" id="af-fecha_inscripcion" type="date" /></div>
+      <div class="form-group"><label class="form-label">Estado</label>
+        <select class="form-input" id="af-estado">
+          <option value="Activo">Activo</option>
+          <option value="Suspendido">Suspendido</option>
+          <option value="Deudor">Deudor</option>
+        </select>
+      </div>
       <div class="form-group form-full"><label class="form-label">Grupo</label><select class="form-input" id="af-grupo"><option value="">Sin asignar</option><option>Deportivo</option><option>Fuerza</option><option>Musculación</option></select></div>
       <div class="form-group form-full"><label class="form-label">Observaciones</label><textarea class="form-input" id="af-obs" rows="3" placeholder="Lesiones, restricciones, notas..."></textarea></div>
     </div>
@@ -1003,6 +1014,11 @@ function sortAlumnos(col){
   renderAlumnos();
 }
 
+function badgeEstado(e){
+  if(e==='Suspendido') return 'badge-suspendido';
+  if(e==='Deudor') return 'badge-deudor';
+  return 'badge-activo';
+}
 function badgeClass(g){if(g==='Deportivo')return'badge-deportivo';if(g==='Fuerza')return'badge-fuerza';if(g==='Musculación')return'badge-musculacion';return'badge-none';}
 function updateAlumnoStats(){
   document.getElementById('stat-total').textContent=alumnos.length;
@@ -1020,7 +1036,8 @@ function renderAlumnos(){
   f.sort((a,b)=>{
     let va='', vb='';
     if(alumnoSortCol==='nombre'){ va=(a.apellido+a.nombre).toLowerCase(); vb=(b.apellido+b.nombre).toLowerCase(); }
-    else if(alumnoSortCol==='edad'){ va=a.edad||0; vb=b.edad||0; return alumnoSortDir==='asc'?va-vb:vb-va; }
+    else if(alumnoSortCol==='fecha_inscripcion'){ va=a.fecha_inscripcion||''; vb=b.fecha_inscripcion||''; }
+    else if(alumnoSortCol==='estado'){ va=(a.estado||'Activo').toLowerCase(); vb=(b.estado||'Activo').toLowerCase(); }
     else if(alumnoSortCol==='grupo'){ va=(a.grupo||'').toLowerCase(); vb=(b.grupo||'').toLowerCase(); }
     return alumnoSortDir==='asc'?va.localeCompare(vb):vb.localeCompare(va);
   });
@@ -1028,10 +1045,14 @@ function renderAlumnos(){
   if(!f.length){tbody.innerHTML='<tr><td colspan="6" class="empty">No se encontraron alumnos</td></tr>';updateAlumnoStats();return;}
   tbody.innerHTML=f.map(a=>{
     const nPlanes=(historialPlanes[a.id]||[]).length;
+    const estado=a.estado||'Activo';
+    const fechaStr=a.fecha_inscripcion?a.fecha_inscripcion.replace(/(\d{4})-(\d{2})-(\d{2})/,'$3/$2/$1'):
+                   (a.obs&&a.obs.startsWith('Registro:'))?a.obs.replace('Registro: ',''):'—';
     return`<tr>
-      <td><div class="avatar-cell"><div class="avatar">${initials(a.nombre,a.apellido)}</div><div><div class="name-main">${a.nombre} ${a.apellido}</div>${a.obs?`<div class="name-sub">📌 ${a.obs.substring(0,30)}${a.obs.length>30?'…':''}</div>`:''}</div></div></td>
-      <td>${a.telefono||'—'}</td><td>${a.edad?a.edad+' años':'—'}</td>
-      <td>${a.peso?a.peso+' kg':'—'} / ${a.altura?a.altura+' cm':'—'}</td>
+      <td><div class="avatar-cell"><div class="avatar">${initials(a.nombre,a.apellido)}</div><div><div class="name-main">${a.nombre} ${a.apellido}</div></div></div></td>
+      <td>${a.telefono||'—'}</td>
+      <td style="font-size:12px">${fechaStr}</td>
+      <td><span class="badge ${badgeEstado(estado)}">${estado}</span></td>
       <td><span class="badge ${badgeClass(a.grupo)}">${a.grupo||'Sin grupo'}</span></td>
       <td><div class="row-actions">
         <button class="act-btn" onclick="abrirPerfil(${a.id})">Ver perfil ${nPlanes?`<span style="background:#111;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:3px">${nPlanes}</span>`:''}
@@ -1058,22 +1079,33 @@ function abrirPerfil(id){
 
   // Header
   document.getElementById('perfil-avatar').textContent=initials(a.nombre,a.apellido);
-  document.getElementById('perfil-name').textContent=`${a.nombre} ${a.apellido}`;
   document.getElementById('perfil-meta').textContent=[
     a.edad?a.edad+' años':'',
     a.grupo||'',
     a.telefono||''
   ].filter(Boolean).join(' · ');
 
+  // Estado badge en el header del perfil
+  const estado = a.estado||'Activo';
+  const estadoBadge = `<span class="badge ${badgeEstado(estado)}" style="margin-left:8px">${estado}</span>`;
+  document.getElementById('perfil-name').innerHTML = `${a.nombre} ${a.apellido} ${estadoBadge}`;
+
+  // Fecha inscripción formateada
+  const fechaInsc = a.fecha_inscripcion
+    ? a.fecha_inscripcion.replace(/(\d{4})-(\d{2})-(\d{2})/,'$3/$2/$1')
+    : (a.obs&&a.obs.startsWith('Registro:') ? a.obs.replace('Registro: ','') : '—');
+
   // Datos
   document.getElementById('perfil-datos-body').innerHTML=[
     ['Teléfono', a.telefono||'—'],
     ['Edad', a.edad?a.edad+' años':'—'],
+    ['Inscripción', fechaInsc],
+    ['Estado', estado],
     ['Dirección', a.direccion||'—'],
     ['Peso', a.peso?a.peso+' kg':'—'],
     ['Altura', a.altura?a.altura+' cm':'—'],
     ['Grupo', a.grupo||'—'],
-    ['Observaciones', a.obs||'—'],
+    ['Observaciones', a.obs&&!a.obs.startsWith('Registro:')?a.obs:'—'],
   ].map(([l,v])=>`<div class="perfil-dato-row"><span class="perfil-dato-label">${l}</span><span style="font-weight:500">${v}</span></div>`).join('');
 
   renderHistorial(id);
@@ -1311,12 +1343,36 @@ function deleteAsignacion(asigId){
     toast('Asignación eliminada');
   });
 }
-function openAlumnoModal(id=null){editAId=id;document.getElementById('alumno-modal-title').textContent=id?'Editar alumno':'Nuevo alumno';const flds=['nombre','apellido','telefono','edad','direccion','peso','altura','grupo','obs'];if(id){const a=alumnos.find(x=>x.id===id);flds.forEach(f=>{document.getElementById('af-'+f).value=a[f]||'';});}else{flds.forEach(f=>{document.getElementById('af-'+f).value='';});}document.getElementById('alumno-modal').classList.add('open');}
+function openAlumnoModal(id=null){
+  editAId=id;
+  document.getElementById('alumno-modal-title').textContent=id?'Editar alumno':'Nuevo alumno';
+  const flds=['nombre','apellido','telefono','edad','direccion','peso','altura','grupo','obs','fecha_inscripcion'];
+  if(id){
+    const a=alumnos.find(x=>x.id===id);
+    flds.forEach(f=>{document.getElementById('af-'+f).value=a[f]||'';});
+    document.getElementById('af-estado').value=a.estado||'Activo';
+  } else {
+    flds.forEach(f=>{document.getElementById('af-'+f).value='';});
+    document.getElementById('af-estado').value='Activo';
+  }
+  document.getElementById('alumno-modal').classList.add('open');
+}
 function closeAlumnoModal(){document.getElementById('alumno-modal').classList.remove('open');editAId=null;}
 async function saveAlumno(){
   const nombre=document.getElementById('af-nombre').value.trim(),apellido=document.getElementById('af-apellido').value.trim();
   if(!nombre||!apellido){alert('Nombre y apellido son obligatorios');return;}
-  const data={nombre,apellido,telefono:document.getElementById('af-telefono').value.trim(),edad:parseInt(document.getElementById('af-edad').value)||null,direccion:document.getElementById('af-direccion').value.trim(),peso:parseFloat(document.getElementById('af-peso').value)||null,altura:parseFloat(document.getElementById('af-altura').value)||null,grupo:document.getElementById('af-grupo').value,obs:document.getElementById('af-obs').value.trim()};
+  const data={
+    nombre,apellido,
+    telefono:document.getElementById('af-telefono').value.trim(),
+    edad:parseInt(document.getElementById('af-edad').value)||null,
+    direccion:document.getElementById('af-direccion').value.trim(),
+    peso:parseFloat(document.getElementById('af-peso').value)||null,
+    altura:parseFloat(document.getElementById('af-altura').value)||null,
+    grupo:document.getElementById('af-grupo').value,
+    obs:document.getElementById('af-obs').value.trim(),
+    fecha_inscripcion:document.getElementById('af-fecha_inscripcion').value||null,
+    estado:document.getElementById('af-estado').value||'Activo',
+  };
   if(editAId){
     await sb.from('alumnos').update(data).eq('id',editAId);
     const i=alumnos.findIndex(x=>x.id===editAId);alumnos[i]={...alumnos[i],...data};
