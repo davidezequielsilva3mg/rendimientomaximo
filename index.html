@@ -172,7 +172,7 @@ tr:hover td { background: #faf9f7; }
 .plan-block { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px; overflow: hidden; }
 .plan-block-header { background: #f2f1ee; padding: 7px 12px; font-size: 10px; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--card-border); }
 .semanas-row { display: grid; grid-template-columns: 190px 1fr 1fr 1fr 1fr; border-bottom: 1px solid var(--card-border); }
-.sem-header { padding: 6px 4px; text-align: center; font-size: 10px; font-weight: 500; border-right: 1px solid var(--card-border); }
+.sem-header { padding: 6px 4px; text-align: center; font-size: 10px; font-weight: 500; border-right: 2px solid #aaa; }
 .sem-header:last-child { border-right: none; }
 .sem-header.s1 { background: #e8f0fb; color: #2c5aa0; } .sem-header.s2 { background: #fef9e7; color: #b7950b; }
 .sem-header.s3 { background: #eafaf1; color: #1e8449; } .sem-header.s4 { background: #fdf2f8; color: #8e44ad; }
@@ -183,13 +183,13 @@ tr:hover td { background: #faf9f7; }
 .eje-name-cell { padding: 6px 8px; display: flex; align-items: center; }
 .eje-name-input { border: none; background: transparent; font-size: 12px; font-weight: 500; color: var(--text-primary); width: 100%; padding: 2px 3px; border-radius: 3px; }
 .eje-name-input:focus { outline: none; background: #fff; border: 1px solid #ccc; }
-.eje-sem-cell { padding: 4px 3px; border-right: 1px solid var(--card-border); }
+.eje-sem-cell { padding: 4px 3px; border-right: 2px solid #aaa; }
 .eje-sem-cell:last-child { border-right: none; }
 .serie-labels { display: flex; justify-content: space-around; }
 .serie-label { font-size: 9px; color: var(--text-muted); text-align: center; flex: 1; }
 .eje-data-row { display: grid; grid-template-columns: 190px 1fr 1fr 1fr 1fr; }
 .eje-data-label { padding: 3px 8px 3px 14px; font-size: 10px; color: var(--text-muted); font-weight: 500; display: flex; align-items: center; }
-.eje-vals-cell { padding: 2px 2px; border-right: 1px solid var(--card-border); display: flex; gap: 2px; justify-content: space-around; align-items: center; }
+.eje-vals-cell { padding: 2px 2px; border-right: 2px solid #aaa; display: flex; gap: 2px; justify-content: space-around; align-items: center; }
 .eje-vals-cell:last-child { border-right: none; }
 .val-input { width: 28px; border: 1px solid transparent; border-radius: 3px; padding: 2px 1px; font-size: 11px; text-align: center; background: transparent; color: var(--text-primary); }
 .val-input:focus { outline: none; border-color: #ccc; background: #fff; }
@@ -2175,8 +2175,8 @@ function renderDias(){
 
 function renderBloque(dn,bloque){
   // Siempre 4 series fijas
-  const sC=SEMANAS.map(s=>({s,n:4}));
-  const sH=sC.map(({s})=>`<div class="sem-header ${s.toLowerCase()}">${SEM_LBL[s]}<br><span style="font-weight:400;font-size:9px">4 series</span></div>`).join('');
+  const sC=SEMANAS.map(s=>({s,n:5}));
+  const sH=sC.map(({s})=>`<div class="sem-header ${s.toLowerCase()}">${SEM_LBL[s]}<br><span style="font-weight:400;font-size:9px">5 series</span></div>`).join('');
   const eH=bloque.ejercicios.map(e=>renderEje(dn,bloque.id,e,sC)).join('');
   return`<div class="plan-block" style="border-radius:10px;overflow:hidden;border:1px solid var(--card-border)">
     <div class="semanas-row" style="grid-template-columns:220px 1fr 1fr 1fr 1fr"><div class="sem-header eje-col">Ejercicio</div>${sH}</div>
