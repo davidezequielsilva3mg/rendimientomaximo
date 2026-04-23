@@ -631,7 +631,8 @@ tr:hover td { background: #faf9f7; }
           <select class="filter-select" id="filter-grupo" onchange="renderBiblioteca()"><option value="">Todos los grupos</option><option>Fuerza</option><option>Deportivo</option><option>Musculación</option></select>
           <select class="filter-select" id="filter-fase" onchange="renderBiblioteca()"><option value="">Todas las fases</option><option>Fase 1</option><option>Fase 2</option><option>Fase 3</option><option>Fase 4</option><option>Fase 5</option></select>
           <select class="filter-select" id="filter-subfase" onchange="renderBiblioteca()"><option value="">Todas las subfases</option><option>Subfase A</option><option>Subfase B</option><option>Subfase C</option></select>
-          <div style="font-size:12px;color:var(--text-muted);margin-left:auto" id="browser-count"></div>
+          <div style="font-size:12px;color:var(--text-muted)" id="browser-count"></div>
+          <button class="btn btn-dark" style="margin-left:auto" onclick="bibliotecaCrearPlan()">+ Crear plan</button>
         </div>
         <div class="browser-grid" id="browser-grid"></div>
       </div>
@@ -2069,7 +2070,32 @@ async function wizardAsignarPrearmado(idx){
     historialPlanes[wizardAlumnoId].unshift(row);
   }
   toast(`✓ Plan "${planDisplayName(plan)}" asignado a ${alumno.nombre} ${alumno.apellido}`);
+  // Imprimir automáticamente con el nombre del alumno
+  imprimirPlanDirecto(idx, `${alumno.nombre} ${alumno.apellido}`);
   wizardReset();
+}
+
+function bibliotecaCrearPlan(){
+  // Limpiar editor
+  planDias = TPL();
+  ['sel-grupo','sel-fase','sel-subfase'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('sel-nombre-libre').value='';
+  document.getElementById('meta-objetivo').value='';
+  document.getElementById('meta-plan').value='';
+  document.getElementById('meta-nombre').value='';
+  updateAssignBadge();
+  renderDias();
+  renderSavedInEditor();
+  // Ir a la subtab Rutinas y mostrar el editor directamente (sin alumno)
+  switchPlanesSubtab('rutinas');
+  wizardAlumnoId = null;
+  document.getElementById('wz-alumno-info').style.display = 'none';
+  document.getElementById('wz-step1-badge').className = 'wz-step-badge done';
+  document.getElementById('wz-step2-badge').className = 'wz-step-badge done';
+  document.getElementById('wz-step3-badge').className = 'wz-step-badge active';
+  wizardShowPaso('wz-paso3-editor');
+  document.getElementById('wz-editor-actions').style.display = 'flex';
+  document.getElementById('plan-editor-content').scrollTop = 0;
 }
 
 function wizardEditarPrearmado(idx){
@@ -2865,8 +2891,7 @@ function selectEjercicioFromPicker(nombre){
   closePickerModal();
 }
 
-function imprimirPlanDirecto(idx){
-  // Guardar estado actual del editor
+function imprimirPlanDirecto(idx, nombreAlumno=null){
   const diasBackup = JSON.parse(JSON.stringify(planDias));
   const grupoBackup = document.getElementById('sel-grupo').value;
   const faseBackup  = document.getElementById('sel-fase').value;
@@ -2875,7 +2900,6 @@ function imprimirPlanDirecto(idx){
   const numBackup   = document.getElementById('meta-plan').value;
   const nomBackup   = document.getElementById('meta-nombre').value;
 
-  // Cargar el plan seleccionado temporalmente
   const p = savedPlans[idx];
   planDias = JSON.parse(JSON.stringify(p.dias));
   document.getElementById('sel-grupo').value   = p.grupo||'';
@@ -2883,7 +2907,8 @@ function imprimirPlanDirecto(idx){
   document.getElementById('sel-subfase').value = p.subfase||'';
   document.getElementById('meta-objetivo').value = p.objetivo||'';
   document.getElementById('meta-plan').value   = p.plan_num||'';
-  document.getElementById('meta-nombre').value = p.nombre||'';
+  // Si viene nombreAlumno del wizard, usarlo; si no, el del plan
+  document.getElementById('meta-nombre').value = nombreAlumno || p.nombre||'';
 
   // Imprimir
   imprimirPlan();
