@@ -2337,7 +2337,7 @@ function renderBiblioteca(){
 }
 
 function cargarPlan(idx){
-  showConfirm('¿Cargar este plan?','Se reemplazará el plan en pantalla. Los cambios no guardados se perderán.',()=>{
+  showConfirm('¿Editar este plan?','Se abrirá en el editor. Los cambios no guardados se perderán.',()=>{
     const p=savedPlans[idx];
     planDias=JSON.parse(JSON.stringify(p.dias));
     document.getElementById('sel-grupo').value=p.grupo||'';
@@ -2348,10 +2348,19 @@ function cargarPlan(idx){
     document.getElementById('meta-plan').value=p.plan_num||'';
     document.getElementById('meta-nombre').value=p.nombre||'';
     updateAssignBadge();
-    switchPlanesSubtab('editor');
     renderDias();
+    renderSavedInEditor();
+    // Abrir el editor en el wizard sin alumno seleccionado
+    switchPlanesSubtab('rutinas');
+    wizardAlumnoId = null;
+    document.getElementById('wz-alumno-info').style.display = 'none';
+    document.getElementById('wz-step1-badge').className = 'wz-step-badge done';
+    document.getElementById('wz-step2-badge').className = 'wz-step-badge done';
+    document.getElementById('wz-step3-badge').className = 'wz-step-badge active';
+    wizardShowPaso('wz-paso3-editor');
+    document.getElementById('wz-editor-actions').style.display = 'flex';
     document.getElementById('plan-editor-content').scrollTop=0;
-    toast('Plan cargado');
+    toast('Plan cargado — editá y guardá los cambios');
   });
 }
 
