@@ -297,7 +297,16 @@ tr:hover td { background: #faf9f7; }
 .eje-picker-item-cat { font-size: 10px; }
 .eje-picker-empty { padding: 14px 12px; font-size: 12px; color: var(--text-muted); text-align: center; }
 
-/* Panel navegador de ejercicios por categoría */
+/* ══ WIZARD RUTINAS ══ */
+.wz-step-badge { font-size:12px;font-weight:500;padding:4px 12px;border-radius:20px;background:#f0f0f0;color:#999; }
+.wz-step-badge.active { background:#111;color:#fff; }
+.wz-step-badge.done { background:#e8f4e8;color:#2d6a2d; }
+.wz-step-sep { color:#ccc;font-size:14px; }
+.wz-paso { flex:1;overflow-y:auto; }
+.wz-tipo-card { border:2px solid var(--card-border);border-radius:12px;padding:28px 20px;cursor:pointer;text-align:center;transition:border-color .15s,box-shadow .15s; }
+.wz-tipo-card:hover { border-color:#111;box-shadow:0 4px 16px rgba(0,0,0,.08); }
+
+/* ══ PANEL CATEGORIA ══ */
 .cat-panel-overlay { position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.25); }
 .cat-panel { position:fixed;top:0;right:0;width:320px;height:100vh;background:#fff;box-shadow:-4px 0 24px rgba(0,0,0,.15);z-index:401;display:flex;flex-direction:column;overflow:hidden; }
 .cat-panel-header { padding:14px 16px;border-bottom:1px solid var(--card-border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0; }
@@ -503,19 +512,118 @@ tr:hover td { background: #faf9f7; }
 
     <!-- ══ PLANES ══ -->
     <div id="tab-planes" class="tab-content" style="min-height:0">
-      <div class="planes-topbar">
-        <div><div class="page-title">Planes de entrenamiento</div><div class="page-sub">Deportivo · Fuerza · Musculación</div></div>
-        <div style="display:flex;gap:10px">
-          <button class="btn btn-ghost" onclick="imprimirPlan()">🖨 Imprimir</button>
-          <button class="btn btn-ghost" onclick="confirmarNuevoPlan()">Nuevo plan</button>
-          <button class="btn btn-green" onclick="guardarPlan()">Guardar plan</button>
-        </div>
-      </div>
-      <div class="planes-subtabs">
-        <button class="planes-subtab active" id="pstab-editor" onclick="switchPlanesSubtab('editor')">Editor</button>
+      <div class="planes-subtabs" style="flex-shrink:0">
+        <button class="planes-subtab active" id="pstab-rutinas" onclick="switchPlanesSubtab('rutinas')">Rutinas</button>
         <button class="planes-subtab" id="pstab-biblioteca" onclick="switchPlanesSubtab('biblioteca')">Biblioteca de planes</button>
         <button class="planes-subtab" id="pstab-ejercicios" onclick="switchPlanesSubtab('ejercicios')">Ejercicios</button>
       </div>
+
+      <!-- ══ WIZARD RUTINAS ══ -->
+      <div id="planes-rutinas" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+
+        <!-- Barra superior del wizard -->
+        <div id="wizard-topbar" style="padding:12px 28px;border-bottom:1px solid var(--card-border);display:flex;align-items:center;gap:16px;flex-shrink:0;flex-wrap:wrap;background:#fafaf9">
+          <!-- Pasos breadcrumb -->
+          <div style="display:flex;align-items:center;gap:8px;flex:1">
+            <div id="wz-step1-badge" class="wz-step-badge active">1. Alumno</div>
+            <div class="wz-step-sep">›</div>
+            <div id="wz-step2-badge" class="wz-step-badge">2. Tipo de plan</div>
+            <div class="wz-step-sep">›</div>
+            <div id="wz-step3-badge" class="wz-step-badge">3. Plan</div>
+          </div>
+          <!-- Info alumno seleccionado -->
+          <div id="wz-alumno-info" style="display:none;font-size:13px;color:var(--text-secondary)">
+            👤 <strong id="wz-alumno-nombre"></strong>
+            <button onclick="wizardReset()" style="margin-left:10px;background:none;border:none;cursor:pointer;font-size:11px;color:var(--text-muted);text-decoration:underline">cambiar</button>
+          </div>
+          <!-- Botones acción del editor -->
+          <div id="wz-editor-actions" style="display:none;gap:8px;display:none">
+            <button class="btn btn-ghost" onclick="imprimirPlan()">🖨 Imprimir</button>
+            <button class="btn btn-green" onclick="guardarPlan()">Guardar plan</button>
+          </div>
+        </div>
+
+        <!-- PASO 1: Elegir alumno -->
+        <div id="wz-paso1" class="wz-paso content">
+          <div style="max-width:520px;margin:0 auto;padding-top:20px">
+            <div style="font-size:18px;font-weight:500;margin-bottom:6px">¿Para quién es el plan?</div>
+            <div style="font-size:13px;color:var(--text-muted);margin-bottom:24px">Buscá un alumno existente o creá uno nuevo</div>
+            <div class="ac-wrap" style="margin-bottom:16px">
+              <input class="search-input" id="wz-search-alumno" style="margin:0;font-size:14px;padding:10px 14px"
+                type="text" placeholder="Buscar alumno por nombre..."
+                oninput="wizardBuscarAlumno(this.value)"
+                autocomplete="off" />
+              <div id="wz-ac-alumnos" style="display:none;position:absolute;left:0;right:0;top:100%;background:#fff;border:1px solid var(--card-border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.1);z-index:200;max-height:280px;overflow-y:auto"></div>
+            </div>
+            <div style="text-align:center;color:var(--text-muted);font-size:13px;margin:16px 0">— o —</div>
+            <button class="btn btn-dark" style="width:100%;padding:10px" onclick="wizardNuevoAlumno()">+ Crear nuevo alumno</button>
+          </div>
+        </div>
+
+        <!-- PASO 2: Tipo de plan -->
+        <div id="wz-paso2" class="wz-paso content" style="display:none">
+          <div style="max-width:600px;margin:0 auto;padding-top:20px">
+            <div style="font-size:18px;font-weight:500;margin-bottom:6px">¿Qué tipo de plan?</div>
+            <div style="font-size:13px;color:var(--text-muted);margin-bottom:28px">Elegí un plan pre armado de la biblioteca o creá uno personalizado</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+              <div class="wz-tipo-card" onclick="wizardElegirTipo('prearmado')">
+                <div style="font-size:28px;margin-bottom:10px">📋</div>
+                <div style="font-size:15px;font-weight:600;margin-bottom:6px">Pre armado</div>
+                <div style="font-size:12px;color:var(--text-muted)">Elegí un plan de la biblioteca por Grupo · Fase · Subfase. Listo para asignar.</div>
+              </div>
+              <div class="wz-tipo-card" onclick="wizardElegirTipo('personalizado')">
+                <div style="font-size:28px;margin-bottom:10px">✏️</div>
+                <div style="font-size:15px;font-weight:600;margin-bottom:6px">Personalizado</div>
+                <div style="font-size:12px;color:var(--text-muted)">Creá un plan desde cero o tomá uno como base y modificalo.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PASO 3a: Pre armado -->
+        <div id="wz-paso3-prearmado" class="wz-paso" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+          <div style="padding:14px 28px;border-bottom:1px solid var(--card-border);display:flex;align-items:center;gap:12px;flex-shrink:0;flex-wrap:wrap;background:#fafaf9">
+            <select class="filter-select" id="wz-filter-grupo" onchange="wizardRenderPrearmados()"><option value="">Todos los grupos</option><option>Fuerza</option><option>Deportivo</option><option>Musculación</option></select>
+            <select class="filter-select" id="wz-filter-fase" onchange="wizardRenderPrearmados()"><option value="">Todas las fases</option><option>Fase 1</option><option>Fase 2</option><option>Fase 3</option><option>Fase 4</option><option>Fase 5</option></select>
+            <select class="filter-select" id="wz-filter-subfase" onchange="wizardRenderPrearmados()"><option value="">Todas las subfases</option><option>Subfase A</option><option>Subfase B</option><option>Subfase C</option></select>
+            <input class="search-input" id="wz-search-plan" style="margin:0;max-width:220px" type="text" placeholder="Buscar plan..." oninput="wizardRenderPrearmados()" />
+            <div style="font-size:12px;color:var(--text-muted);margin-left:auto" id="wz-plan-count"></div>
+            <button class="btn btn-ghost" style="font-size:12px" onclick="wizardBack()">← Volver</button>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:18px 28px">
+            <div class="browser-grid" id="wz-prearmados-grid"></div>
+          </div>
+        </div>
+
+        <!-- PASO 3b: Editor personalizado -->
+        <div id="wz-paso3-editor" class="wz-paso" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+          <div class="assign-bar" style="flex-shrink:0">
+            <div class="assign-bar-label">Plan:</div>
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <div class="assign-mini-label">Nombre del plan</div>
+              <input class="assign-select" id="sel-nombre-libre" type="text" placeholder="Ej: Plan verano, Fase inicial..." style="min-width:220px" oninput="updateAssignBadge()" />
+            </div>
+            <div><div class="assign-mini-label">Grupo (opcional)</div><select class="assign-select" id="sel-grupo" onchange="updateAssignBadge()"><option value="">— Grupo —</option><option>Fuerza</option><option>Deportivo</option><option>Musculación</option></select></div>
+            <div><div class="assign-mini-label">Fase</div><select class="assign-select" id="sel-fase" onchange="updateAssignBadge()"><option value="">— Fase —</option><option>Fase 1</option><option>Fase 2</option><option>Fase 3</option><option>Fase 4</option><option>Fase 5</option></select></div>
+            <div><div class="assign-mini-label">Subfase</div><select class="assign-select" id="sel-subfase" onchange="updateAssignBadge()"><option value="">— Subfase —</option><option>Subfase A</option><option>Subfase B</option><option>Subfase C</option></select></div>
+            <div class="assign-badge" id="assign-badge">Sin asignar</div>
+            <button class="btn btn-ghost" style="font-size:12px;margin-left:auto" onclick="wizardBack()">← Volver</button>
+          </div>
+          <div class="plan-editor-content" id="plan-editor-content">
+            <div class="meta-card">
+              <div class="meta-group"><div class="meta-label">Objetivo / Frecuencia</div><input class="meta-input" id="meta-objetivo" type="text" placeholder="Ej: Fuerza máxima" style="width:190px"/></div>
+              <div class="meta-group"><div class="meta-label">Plan Nº</div><input class="meta-input" id="meta-plan" type="text" placeholder="1" style="width:60px"/></div>
+              <div class="meta-group"><div class="meta-label">Alumno</div><input class="meta-input" id="meta-nombre" type="text" placeholder="Nombre del alumno" style="width:190px" readonly/></div>
+            </div>
+            <div id="dias-container"></div>
+            <div class="saved-plans-section">
+              <div class="saved-plans-title">Planes guardados en biblioteca</div>
+              <div class="saved-plans-grid" id="saved-plans-grid"></div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- fin planes-rutinas -->
 
       <!-- Editor -->
       <div id="planes-editor" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
@@ -869,7 +977,7 @@ function switchTab(tab,el){
   document.getElementById('tab-'+tab).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   if(el)el.classList.add('active');
-  if(tab==='planes'){switchPlanesSubtab('editor');renderDias();renderSavedInEditor();renderBiblioteca();}
+  if(tab==='planes'){switchPlanesSubtab('rutinas');}
   if(tab==='alumnos' && perfilAlumnoId){ volverListadoAlumnos(); }
   if(tab==='config'){cargarFormConfig();}
 }
@@ -883,27 +991,21 @@ function switchSubtabProf(tab,el){
   if(tab==='registro'){setRangoMes(0);}
 }
 function switchPlanesSubtab(tab){
-  const tabs = ['editor','biblioteca','ejercicios'];
+  const tabs = ['rutinas','biblioteca','ejercicios'];
   tabs.forEach(t=>{
     const el = document.getElementById('planes-'+t);
     if(!el) return;
-    if(t===tab){
-      // biblioteca usa display:flex de plan-browser, el resto flex column
-      el.style.display = 'flex';
-      el.style.flexDirection = 'column';
-      el.style.flex = '1';
-      el.style.overflow = 'hidden';
-      el.style.minHeight = '0';
-    } else {
-      el.style.display = 'none';
-    }
+    el.style.display = t===tab ? 'flex' : 'none';
+    el.style.flexDirection = 'column';
+    el.style.flex = '1';
+    el.style.overflow = 'hidden';
+    el.style.minHeight = '0';
     const btn = document.getElementById('pstab-'+t);
     if(btn) btn.classList.toggle('active', t===tab);
   });
   if(tab==='biblioteca') renderBiblioteca();
-  if(tab==='editor') renderDias();
   if(tab==='ejercicios') renderEjercicios();
-
+  if(tab==='rutinas') wizardReset();
 }
 
 // ══ CONFIGURACIÓN ══
@@ -1380,7 +1482,15 @@ async function saveAlumno(){
     if(row) alumnos.push(row);
   }
   closeAlumnoModal();
-  if(perfilAlumnoId){abrirPerfil(perfilAlumnoId);}else{renderAlumnos();}
+  if(wizardPendingNuevoAlumno && data){
+    wizardPendingNuevoAlumno = false;
+    const nuevo = editAId ? alumnos.find(x=>x.id===editAId) : alumnos[alumnos.length-1];
+    if(nuevo) wizardSeleccionarAlumno(nuevo.id);
+  } else if(perfilAlumnoId){
+    abrirPerfil(perfilAlumnoId);
+  } else {
+    renderAlumnos();
+  }
 }
 function editAlumno(id){openAlumnoModal(id);}
 async function deleteAlumno(id){
@@ -1829,6 +1939,190 @@ function toggleDetalle(id){
   if(btn) btn.textContent=el.classList.contains('open')?'ocultar detalle':'ver detalle';
 }
 
+// ══ WIZARD RUTINAS ══
+let wizardAlumnoId = null;
+let wizardTipo = null; // 'prearmado' | 'personalizado'
+
+function wizardReset(){
+  wizardAlumnoId = null;
+  wizardTipo = null;
+  document.getElementById('wz-search-alumno').value = '';
+  document.getElementById('wz-alumno-info').style.display = 'none';
+  document.getElementById('wz-editor-actions').style.display = 'none';
+  // Badges
+  document.getElementById('wz-step1-badge').className = 'wz-step-badge active';
+  document.getElementById('wz-step2-badge').className = 'wz-step-badge';
+  document.getElementById('wz-step3-badge').className = 'wz-step-badge';
+  // Pasos
+  wizardShowPaso('wz-paso1');
+}
+
+function wizardShowPaso(id){
+  ['wz-paso1','wz-paso2','wz-paso3-prearmado','wz-paso3-editor'].forEach(p=>{
+    const el = document.getElementById(p);
+    if(el) el.style.display = 'none';
+  });
+  const target = document.getElementById(id);
+  if(target){
+    target.style.display = (id==='wz-paso3-prearmado'||id==='wz-paso3-editor') ? 'flex' : 'block';
+  }
+}
+
+function wizardBuscarAlumno(q){
+  const drop = document.getElementById('wz-ac-alumnos');
+  if(!q.trim()){ drop.style.display='none'; return; }
+  const matches = alumnos.filter(a=>(a.nombre+' '+a.apellido).toLowerCase().includes(q.toLowerCase())).slice(0,8);
+  if(!matches.length){ drop.style.display='none'; return; }
+  drop.innerHTML = matches.map(a=>`
+    <div style="padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid #f5f5f5"
+      onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background=''"
+      onmousedown="wizardSeleccionarAlumno(${a.id})">
+      <div style="width:32px;height:32px;border-radius:50%;background:#111;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0">${initials(a.nombre,a.apellido)}</div>
+      <div>
+        <div style="font-size:13px;font-weight:500">${a.nombre} ${a.apellido}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${a.grupo||'Sin grupo'} ${a.telefono?'· '+a.telefono:''}</div>
+      </div>
+    </div>`).join('');
+  drop.style.display = 'block';
+}
+
+function wizardSeleccionarAlumno(id){
+  wizardAlumnoId = id;
+  const a = alumnos.find(x=>x.id===id);
+  document.getElementById('wz-ac-alumnos').style.display = 'none';
+  document.getElementById('wz-search-alumno').value = '';
+  document.getElementById('wz-alumno-nombre').textContent = `${a.nombre} ${a.apellido}`;
+  document.getElementById('wz-alumno-info').style.display = 'flex';
+  // Badges
+  document.getElementById('wz-step1-badge').className = 'wz-step-badge done';
+  document.getElementById('wz-step2-badge').className = 'wz-step-badge active';
+  // Ir al paso 2
+  wizardShowPaso('wz-paso2');
+  // Pre-llenar nombre del alumno en el editor
+  document.getElementById('meta-nombre').value = `${a.nombre} ${a.apellido}`;
+}
+
+function wizardNuevoAlumno(){
+  // Abre el modal de nuevo alumno; al guardar, auto-selecciona el nuevo alumno
+  wizardPendingNuevoAlumno = true;
+  openAlumnoModal();
+}
+
+let wizardPendingNuevoAlumno = false;
+
+function wizardElegirTipo(tipo){
+  wizardTipo = tipo;
+  document.getElementById('wz-step2-badge').className = 'wz-step-badge done';
+  document.getElementById('wz-step3-badge').className = 'wz-step-badge active';
+
+  if(tipo === 'prearmado'){
+    wizardShowPaso('wz-paso3-prearmado');
+    wizardRenderPrearmados();
+  } else {
+    // Personalizado: limpiar editor
+    planDias = TPL();
+    ['sel-grupo','sel-fase','sel-subfase'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('sel-nombre-libre').value='';
+    document.getElementById('meta-objetivo').value='';
+    document.getElementById('meta-plan').value='';
+    updateAssignBadge();
+    renderDias();
+    renderSavedInEditor();
+    wizardShowPaso('wz-paso3-editor');
+    // Mostrar botones del editor
+    const wa = document.getElementById('wz-editor-actions');
+    wa.style.display = 'flex';
+  }
+}
+
+function wizardBack(){
+  // Volver al paso 2
+  document.getElementById('wz-step3-badge').className = 'wz-step-badge';
+  document.getElementById('wz-step2-badge').className = 'wz-step-badge active';
+  document.getElementById('wz-editor-actions').style.display = 'none';
+  wizardShowPaso('wz-paso2');
+}
+
+function wizardRenderPrearmados(){
+  const fg = document.getElementById('wz-filter-grupo').value;
+  const ff = document.getElementById('wz-filter-fase').value;
+  const fs = document.getElementById('wz-filter-subfase').value;
+  const fq = (document.getElementById('wz-search-plan').value||'').toLowerCase();
+  const filt = savedPlans.filter(p=>
+    (!fg||p.grupo===fg) && (!ff||p.fase===ff) && (!fs||p.subfase===fs) &&
+    (!fq || planDisplayName(p).toLowerCase().includes(fq))
+  );
+  document.getElementById('wz-plan-count').textContent = filt.length+' plan'+(filt.length!==1?'es':'');
+  const grid = document.getElementById('wz-prearmados-grid');
+  if(!filt.length){
+    grid.innerHTML='<div class="browser-empty">No hay planes con esos filtros.</div>';
+    return;
+  }
+  grid.innerHTML = filt.map(p=>{
+    const ri = savedPlans.indexOf(p);
+    return `<div class="browser-card">
+      <div class="browser-card-top"><div class="browser-card-title">${planDisplayName(p)}</div></div>
+      <div class="browser-card-tags">
+        ${p.nombre_libre ? `<span class="ptag" style="background:#e8f0fb;color:#2c5aa0">📝 Personalizado</span>` : `${ptagGrupo(p.grupo)}<span class="ptag ptag-fase">${p.fase||''}</span><span class="ptag ptag-sub">${p.subfase||''}</span>`}
+      </div>
+      <div class="browser-card-meta">${p.objetivo?'Objetivo: '+p.objetivo+'<br>':''}Guardado: ${p.fecha||'—'}</div>
+      <div class="browser-card-actions">
+        <button class="act-btn" onclick="wizardAsignarPrearmado(${ri})">✓ Asignar a alumno</button>
+        <button class="act-btn" onclick="wizardEditarPrearmado(${ri})">Editar</button>
+        <button class="act-btn" onclick="imprimirPlanDirecto(${ri})">🖨</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function wizardAsignarPrearmado(idx){
+  if(!wizardAlumnoId){ toast('No hay alumno seleccionado','#c0392b'); return; }
+  const plan = savedPlans[idx];
+  const alumno = alumnos.find(a=>a.id===wizardAlumnoId);
+  // Guardar en historial_planes
+  const asig = {
+    alumno_id: wizardAlumnoId,
+    fecha: new Date().toISOString().split('T')[0],
+    grupo: plan.grupo||'',
+    fase: plan.fase||'',
+    subfase: plan.subfase||'',
+    obs: plan.nombre_libre||'',
+    dias_semana: plan.dias?.length||3,
+    plan_personalizado: null
+  };
+  const {data:row} = await sb.from('historial_planes').insert(asig).select().single();
+  if(row){
+    if(!historialPlanes[wizardAlumnoId]) historialPlanes[wizardAlumnoId]=[];
+    historialPlanes[wizardAlumnoId].unshift(row);
+  }
+  toast(`✓ Plan "${planDisplayName(plan)}" asignado a ${alumno.nombre} ${alumno.apellido}`);
+  wizardReset();
+}
+
+function wizardEditarPrearmado(idx){
+  // Cargar el plan en el editor personalizado
+  const p = savedPlans[idx];
+  planDias = JSON.parse(JSON.stringify(p.dias));
+  document.getElementById('sel-grupo').value = p.grupo||'';
+  document.getElementById('sel-fase').value = p.fase||'';
+  document.getElementById('sel-subfase').value = p.subfase||'';
+  document.getElementById('sel-nombre-libre').value = p.nombre_libre||'';
+  document.getElementById('meta-objetivo').value = p.objetivo||'';
+  document.getElementById('meta-plan').value = p.plan_num||'';
+  updateAssignBadge();
+  renderDias();
+  renderSavedInEditor();
+  wizardTipo = 'personalizado';
+  document.getElementById('wz-step2-badge').className = 'wz-step-badge done';
+  document.getElementById('wz-step3-badge').className = 'wz-step-badge active';
+  wizardShowPaso('wz-paso3-editor');
+  document.getElementById('wz-editor-actions').style.display = 'flex';
+  document.getElementById('plan-editor-content').scrollTop = 0;
+}
+
+// Sobreescribir guardarPlan para que también asigne al alumno si hay uno en el wizard
+const _guardarPlanOriginal = guardarPlan;
+
 // ══ PLANES — EDITOR ══
 function updateAssignBadge(){
   const g=document.getElementById('sel-grupo').value;
@@ -1941,9 +2235,8 @@ async function guardarPlan(){
   const s=document.getElementById('sel-subfase').value;
   const nl=document.getElementById('sel-nombre-libre').value.trim();
 
-  // Necesita nombre libre O los tres campos de grupo/fase/subfase
   if(!nl && (!g||!f||!s)){
-    toast('Completá Grupo+Fase+Subfase, o escribí un nombre libre','#c0392b');
+    toast('Completá Grupo+Fase+Subfase, o escribí un nombre para el plan','#c0392b');
     return;
   }
 
@@ -1959,21 +2252,45 @@ async function guardarPlan(){
     fecha: new Date().toLocaleDateString('es-AR')
   };
 
-  // Buscar si ya existe (por nombre libre o por grupo/fase/subfase)
   const ei = nl
     ? savedPlans.findIndex(p=>p.nombre_libre===nl)
     : savedPlans.findIndex(p=>p.grupo===g&&p.fase===f&&p.subfase===s&&!p.nombre_libre);
 
+  let savedPlan;
   if(ei>=0){
     await sb.from('planes').update(plan).eq('id',savedPlans[ei].id);
     savedPlans[ei]={...savedPlans[ei],...plan};
-    toast('Plan actualizado');
+    savedPlan = savedPlans[ei];
+    toast('Plan actualizado en biblioteca');
   } else {
     const {data:row}=await sb.from('planes').insert(plan).select().single();
-    if(row) savedPlans.push(row);
-    toast('Plan guardado');
+    if(row){ savedPlans.push(row); savedPlan = row; }
+    toast('Plan guardado en biblioteca');
   }
-  renderSavedInEditor();renderBiblioteca();
+
+  // Si hay alumno seleccionado en el wizard → asignar automáticamente
+  if(wizardAlumnoId && savedPlan){
+    const alumno = alumnos.find(a=>a.id===wizardAlumnoId);
+    const asig = {
+      alumno_id: wizardAlumnoId,
+      fecha: new Date().toISOString().split('T')[0],
+      grupo: plan.grupo||'',
+      fase: plan.fase||'',
+      subfase: plan.subfase||'',
+      obs: plan.nombre_libre||'',
+      dias_semana: plan.dias?.length||3,
+      plan_personalizado: null
+    };
+    const {data:row} = await sb.from('historial_planes').insert(asig).select().single();
+    if(row){
+      if(!historialPlanes[wizardAlumnoId]) historialPlanes[wizardAlumnoId]=[];
+      historialPlanes[wizardAlumnoId].unshift(row);
+    }
+    toast(`✓ Plan guardado y asignado a ${alumno.nombre} ${alumno.apellido}`);
+    wizardReset();
+  }
+
+  renderSavedInEditor(); renderBiblioteca();
 }
 
 function planDisplayName(p){
