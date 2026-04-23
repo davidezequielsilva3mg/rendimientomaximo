@@ -625,33 +625,6 @@ tr:hover td { background: #faf9f7; }
 
       </div><!-- fin planes-rutinas -->
 
-      <!-- Editor -->
-      <div id="planes-editor" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
-        <div class="assign-bar">
-          <div class="assign-bar-label">Asignar a:</div>
-          <div><div class="assign-mini-label">Grupo</div><select class="assign-select" id="sel-grupo" onchange="updateAssignBadge()"><option value="">— Grupo —</option><option>Fuerza</option><option>Deportivo</option><option>Musculación</option></select></div>
-          <div><div class="assign-mini-label">Fase</div><select class="assign-select" id="sel-fase" onchange="updateAssignBadge()"><option value="">— Fase —</option><option>Fase 1</option><option>Fase 2</option><option>Fase 3</option><option>Fase 4</option><option>Fase 5</option></select></div>
-          <div><div class="assign-mini-label">Subfase</div><select class="assign-select" id="sel-subfase" onchange="updateAssignBadge()"><option value="">— Subfase —</option><option>Subfase A</option><option>Subfase B</option><option>Subfase C</option></select></div>
-          <div style="display:flex;flex-direction:column;gap:2px">
-            <div class="assign-mini-label">— ó — Nombre libre</div>
-            <input class="assign-select" id="sel-nombre-libre" type="text" placeholder="Ej: Plan Juan verano" style="min-width:180px" oninput="updateAssignBadge()" />
-          </div>
-          <div class="assign-badge" id="assign-badge">Sin asignar</div>
-        </div>
-        <div class="plan-editor-content" id="plan-editor-content">
-          <div class="meta-card">
-            <div class="meta-group"><div class="meta-label">Objetivo</div><input class="meta-input" id="meta-objetivo" type="text" placeholder="Ej: Fuerza máxima" style="width:190px"/></div>
-            <div class="meta-group"><div class="meta-label">Plan Nº</div><input class="meta-input" id="meta-plan" type="text" placeholder="1" style="width:60px"/></div>
-            <div class="meta-group"><div class="meta-label">Alumno (opcional)</div><input class="meta-input" id="meta-nombre" type="text" placeholder="Nombre del alumno" style="width:190px"/></div>
-          </div>
-          <div id="dias-container"></div>
-          <div class="saved-plans-section">
-            <div class="saved-plans-title">Planes guardados</div>
-            <div class="saved-plans-grid" id="saved-plans-grid"></div>
-          </div>
-        </div>
-      </div>
-
       <!-- Biblioteca de planes -->
       <div id="planes-biblioteca" class="plan-browser" style="display:none;">
         <div class="browser-filters">
