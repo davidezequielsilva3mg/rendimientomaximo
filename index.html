@@ -346,6 +346,7 @@ tr:hover td { background: #faf9f7; }
   .layout, .sidebar, .main, .tab-content, .modal-overlay, .toast { display: none !important; }
   #print-area { display: block !important; position: absolute; top: 0; left: 0; width: 100%; }
   #print-content { transform-origin: top left !important; }
+  .print-hoja { transform-origin: top left !important; page-break-after: always; }
   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 }
 </style>
@@ -959,19 +960,37 @@ const TPL=()=>([
       ejeVacio('e4'),ejeVacio('e5'),ejeVacio('e6'),
     ]},
   ]},
-  {num:2, activacion:actVacia(), bloques:[
-    {id:'d2',finalizador:'',ejercicios:[
-      ejeVacio('e7'),ejeVacio('e8'),ejeVacio('e9'),
-      ejeVacio('e10'),ejeVacio('e11'),ejeVacio('e12'),
-    ]},
-  ]},
-  {num:3, activacion:actVacia(), bloques:[
-    {id:'d3',finalizador:'',ejercicios:[
-      ejeVacio('e13'),ejeVacio('e14'),ejeVacio('e15'),
-      ejeVacio('e16'),ejeVacio('e17'),ejeVacio('e18'),
-    ]},
-  ]},
 ]);
+
+function diaVacio(n){
+  const id='d'+n;
+  return {num:n, activacion:actVacia(), bloques:[
+    {id, finalizador:'', ejercicios:[
+      ejeVacio(id+'_1'),ejeVacio(id+'_2'),ejeVacio(id+'_3'),
+      ejeVacio(id+'_4'),ejeVacio(id+'_5'),ejeVacio(id+'_6'),
+    ]},
+  ]};
+}
+
+function addDia(){
+  const n = planDias.length + 1;
+  if(n > 4){ toast('Máximo 4 días por plan','#c0392b'); return; }
+  planDias.push(diaVacio(n));
+  renderDias();
+  // Scroll al nuevo día
+  setTimeout(()=>{
+    const c = document.getElementById('plan-editor-content');
+    if(c) c.scrollTop = c.scrollHeight;
+  }, 100);
+}
+
+function removeDia(num){
+  if(planDias.length <= 1){ toast('El plan debe tener al menos 1 día','#c0392b'); return; }
+  planDias = planDias.filter(d=>d.num!==num);
+  // Renumerar
+  planDias.forEach((d,i)=>d.num=i+1);
+  renderDias();
+}
 
 let planDias=TPL();
 
@@ -2171,7 +2190,6 @@ function updateAssignBadge(){
 function renderDias(){
   const c=document.getElementById('dias-container');c.innerHTML='';
   planDias.forEach(dia=>{
-    // Normalizar activacion: si es string (plan viejo), convertir a array
     if(!Array.isArray(dia.activacion)) dia.activacion=actVacia();
 
     const actHTML=dia.activacion.map((a,i)=>`
@@ -2192,15 +2210,26 @@ function renderDias(){
     sec.className='dia-section';
     sec.innerHTML=`
       <div class="dia-header">
-        <div class="dia-badge">DÍA <input class="dia-num-input" value="${dia.num}" onchange="getPlanDia(${dia.num}).num=parseInt(this.value)||${dia.num}" /></div>
+        <div class="dia-badge">DÍA ${dia.num}</div>
         <div style="display:flex;flex-direction:column;gap:4px;flex:1">
           <div style="font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em">Activación</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">${actHTML}</div>
         </div>
+        ${planDias.length>1?`<button onclick="removeDia(${dia.num})" title="Eliminar este día" style="background:none;border:none;cursor:pointer;color:#ccc;font-size:20px;padding:0 6px;line-height:1;flex-shrink:0" onmouseover="this.style.color='#c0392b'" onmouseout="this.style.color='#ccc'">×</button>`:''}
       </div>
       ${dia.bloques.map(b=>renderBloque(dia.num,b)).join('')}`;
     c.appendChild(sec);
   });
+
+  // Botón agregar día (máximo 4)
+  if(planDias.length < 4){
+    const btn=document.createElement('button');
+    btn.className='btn btn-ghost';
+    btn.style.cssText='width:100%;margin-top:12px;padding:12px;font-size:13px;border-style:dashed';
+    btn.textContent=`＋ Agregar día ${planDias.length+1}`;
+    btn.onclick=addDia;
+    c.appendChild(btn);
+  }
 }
 
 function renderBloque(dn,bloque){
@@ -3134,25 +3163,64 @@ function imprimirPlan() {
   const diasHTML = planDias.map((dia, i) => buildDia(dia, i===0)).join('');
 
   const area = document.getElementById('print-area');
-  area.innerHTML = `<div id="print-content" style="font-family:Arial,Helvetica,sans-serif;color:#000;background:#fff;width:190mm;padding:0;margin:0">${header}${diasHTML}</div>`;
+  const area = document.getElementById('print-area');
 
-  const content = document.getElementById('print-content');
-  content.style.transform = 'none';
-  content.style.transformOrigin = 'top left';
+  if(planDias.length <= 3){
+    // 1, 2 o 3 días → una sola hoja A4
+    const diasHTML = planDias.map((dia, i) => buildDia(dia, i===0)).join('');
+    area.innerHTML = `<div id="print-content" style="font-family:Arial,Helvetica,sans-serif;color:#000;background:#fff;width:190mm;padding:0;margin:0">${header}${diasHTML}</div>`;
 
-  requestAnimationFrame(()=>{
+    const content = document.getElementById('print-content');
+    content.style.transform = 'none';
+    content.style.transformOrigin = 'top left';
+
     requestAnimationFrame(()=>{
-      const altoPx  = content.scrollHeight;
-      const anchoPx = content.scrollWidth;
-      const altoMax = 262 * 3.7795;
-      const anchoMax= 190 * 3.7795;
-      const scale   = Math.min(altoMax/altoPx, anchoMax/anchoPx, 1);
-      content.style.transform = `scale(${scale})`;
-      content.style.transformOrigin = 'top left';
-      area.style.height = (altoPx * scale) + 'px';
-      window.print();
+      requestAnimationFrame(()=>{
+        const altoPx  = content.scrollHeight;
+        const anchoPx = content.scrollWidth;
+        const altoMax = 262 * 3.7795;
+        const anchoMax= 190 * 3.7795;
+        const scale   = Math.min(altoMax/altoPx, anchoMax/anchoPx, 1);
+        content.style.transform = `scale(${scale})`;
+        content.style.transformOrigin = 'top left';
+        area.style.height = (altoPx * scale) + 'px';
+        window.print();
+      });
     });
-  });
+
+  } else {
+    // 4 días → dos hojas: Día 1+2 en hoja 1, Día 3+4 en hoja 2
+    const makeHoja = (dias, esPrimera) => {
+      const diasH = dias.map((dia, i) => buildDia(dia, i===0 && esPrimera)).join('');
+      return `<div class="print-hoja" style="font-family:Arial,Helvetica,sans-serif;color:#000;background:#fff;width:190mm;padding:0;margin:0;page-break-after:always">
+        ${esPrimera ? header : ''}${diasH}
+      </div>`;
+    };
+
+    area.innerHTML =
+      makeHoja([planDias[0], planDias[1]], true) +
+      makeHoja([planDias[2], planDias[3]], false);
+
+    // Escalar cada hoja por separado
+    requestAnimationFrame(()=>{
+      requestAnimationFrame(()=>{
+        const hojas = area.querySelectorAll('.print-hoja');
+        const altoMax  = 262 * 3.7795;
+        const anchoMax = 190 * 3.7795;
+        let totalH = 0;
+        hojas.forEach(h=>{
+          h.style.transform = 'none';
+          h.style.transformOrigin = 'top left';
+          const scale = Math.min(altoMax/h.scrollHeight, anchoMax/h.scrollWidth, 1);
+          h.style.transform = `scale(${scale})`;
+          h.style.transformOrigin = 'top left';
+          totalH += h.scrollHeight * scale;
+        });
+        area.style.height = totalH + 'px';
+        window.print();
+      });
+    });
+  }
 }
 
 // ══ INIT — carga datos desde Supabase ══
