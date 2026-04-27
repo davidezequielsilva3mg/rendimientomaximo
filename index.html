@@ -3167,9 +3167,6 @@ function imprimirPlan() {
     </table>`;
   }
 
-  const diasHTML = planDias.map((dia, i) => buildDia(dia, i===0)).join('');
-
-  const area = document.getElementById('print-area');
   const area = document.getElementById('print-area');
 
   if(planDias.length <= 3){
