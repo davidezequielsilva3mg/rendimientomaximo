@@ -737,6 +737,36 @@ tr:hover td { background: #faf9f7; }
   <div class="cat-panel-body" id="cat-panel-body"></div>
 </div>
 
+<!-- Modal rápido agregar ejercicio desde editor -->
+<div class="modal-overlay" id="modal-rapido-eje">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <div class="modal-title">Agregar ejercicio a la biblioteca</div>
+      <button class="modal-close" onclick="cerrarModalRapidoEjercicio()">×</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="form-group">
+        <label class="form-label">Nombre *</label>
+        <input class="form-input" id="mre-nombre" type="text" placeholder="Nombre del ejercicio" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Categoría</label>
+        <input class="form-input" id="mre-categoria" type="text" placeholder="Ej: Dominante Rodilla..." list="mre-cat-datalist" autocomplete="off" />
+        <datalist id="mre-cat-datalist"></datalist>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Subcategoría</label>
+        <input class="form-input" id="mre-subcategoria" type="text" placeholder="Ej: Anti Extension Frontal..." list="mre-subcat-datalist" autocomplete="off" />
+        <datalist id="mre-subcat-datalist"></datalist>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="cerrarModalRapidoEjercicio()">Cancelar</button>
+      <button class="btn btn-dark" onclick="guardarEjercicioRapido()">Guardar y usar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Asignar Plan -->
 <div class="modal-overlay" id="asignar-plan-modal">
   <div class="modal">
@@ -2764,6 +2794,59 @@ function selectFromCatPanel(nombre){
   closeCatPanel();
 }
 
+// ══ MODAL RÁPIDO AGREGAR EJERCICIO DESDE EDITOR ══
+let _mreDropId = null;
+let _mreInput = null;
+
+function abrirModalRapidoEjercicio(nombre, dropId, input){
+  _mreDropId = dropId;
+  _mreInput = input;
+  // Poblar datalists
+  const cats = [...new Set(ejercicios.map(e=>e.categoria).filter(Boolean))].sort();
+  document.getElementById('mre-cat-datalist').innerHTML = cats.map(c=>`<option value="${c}">`).join('');
+  const subcats = [...new Set(ejercicios.map(e=>e.subcategoria).filter(Boolean))].sort();
+  document.getElementById('mre-subcat-datalist').innerHTML = subcats.map(c=>`<option value="${c}">`).join('');
+  // Pre-llenar nombre
+  document.getElementById('mre-nombre').value = nombre;
+  document.getElementById('mre-categoria').value = '';
+  document.getElementById('mre-subcategoria').value = '';
+  // Ocultar dropdown
+  if(dropId) { const d=document.getElementById(dropId); if(d) d.style.display='none'; }
+  document.getElementById('modal-rapido-eje').classList.add('open');
+  setTimeout(()=>document.getElementById('mre-categoria').focus(), 100);
+}
+
+function cerrarModalRapidoEjercicio(){
+  document.getElementById('modal-rapido-eje').classList.remove('open');
+  _mreDropId = null;
+  _mreInput = null;
+}
+
+async function guardarEjercicioRapido(){
+  const nombre = document.getElementById('mre-nombre').value.trim();
+  if(!nombre){ alert('El nombre es obligatorio'); return; }
+  const data = {
+    nombre,
+    categoria:    document.getElementById('mre-categoria').value.trim(),
+    subcategoria: document.getElementById('mre-subcategoria').value.trim(),
+  };
+  const {data:row} = await sb.from('ejercicios').insert(data).select().single();
+  if(row) ejercicios.push(row);
+
+  // Poner el nombre en el input del editor y actualizar el modelo
+  if(_mreInput){
+    _mreInput.value = nombre;
+    const onin = _mreInput.getAttribute('oninput');
+    if(onin){
+      const expr = onin.split(';')[0].replace(/this\.value/g, JSON.stringify(nombre));
+      try { eval(expr); } catch(e){}
+    }
+  }
+
+  cerrarModalRapidoEjercicio();
+  toast(`✓ "${nombre}" agregado a la biblioteca`);
+}
+
 // ══ AUTOCOMPLETE ══
 function highlightMatch(text, q) {
   if (!q) return text;
@@ -2789,7 +2872,12 @@ function showAC(input, dropId, soloActivacion=false) {
     : pool.slice(0, 30);
 
   if (!matches.length) {
-    drop.innerHTML = `<div class="ac-empty">Sin resultados para "${q}"</div>`;
+    drop.innerHTML = `<div class="ac-empty">Sin resultados para "${q}"
+      <button class="btn btn-dark" style="margin-top:8px;width:100%;font-size:12px;padding:6px"
+        onmousedown="event.preventDefault();abrirModalRapidoEjercicio('${q.replace(/'/g,"\\'").replace(/"/g,'&quot;')}','${dropId}',this.closest('.ac-wrap').querySelector('input'))">
+        + Agregar "${q}" a la biblioteca
+      </button>
+    </div>`;
     drop.style.display = 'block';
     return;
   }
