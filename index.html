@@ -219,7 +219,16 @@ tr:hover td { background: #faf9f7; }
 .plan-browser { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
 .browser-filters { display: flex; gap: 10px; padding: 12px 28px; border-bottom: 1px solid var(--card-border); flex-shrink: 0; flex-wrap: wrap; align-items: center; }
 .filter-select { border: 1px solid var(--card-border); border-radius: 7px; padding: 7px 12px; font-size: 13px; background: var(--input-bg); color: var(--text-primary); cursor: pointer; }
-.browser-grid { flex: 1; overflow-y: auto; padding: 16px 28px; display: grid; grid-template-columns: repeat(auto-fill,minmax(230px,1fr)); gap: 12px; align-content: start; }
+.browser-grid { flex: 1; overflow-y: auto; padding: 0 28px 16px; }
+.browser-list-table { width: 100%; border-collapse: collapse; }
+.browser-list-table th { padding: 10px 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); border-bottom: 2px solid var(--card-border); text-align: left; cursor: pointer; user-select: none; white-space: nowrap; background: var(--bg); position: sticky; top: 0; z-index: 1; }
+.browser-list-table th:hover { color: var(--text-primary); }
+.browser-list-table th .sort-arrow { margin-left: 4px; opacity: 0.4; font-size: 10px; }
+.browser-list-table th.asc .sort-arrow::after { content: '▲'; opacity: 1; }
+.browser-list-table th.desc .sort-arrow::after { content: '▼'; opacity: 1; }
+.browser-list-table th:not(.asc):not(.desc) .sort-arrow::after { content: '⇅'; }
+.browser-list-table td { padding: 10px 12px; font-size: 13px; border-bottom: 1px solid var(--card-border); vertical-align: middle; }
+.browser-list-table tr:hover td { background: #fafaf9; }
 .browser-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px; padding: 14px 16px; }
 .browser-card:hover { border-color: #888; }
 .browser-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
@@ -227,7 +236,7 @@ tr:hover td { background: #faf9f7; }
 .browser-card-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 6px; }
 .browser-card-meta { font-size: 11px; color: var(--text-muted); line-height: 1.5; }
 .browser-card-actions { display: flex; gap: 6px; margin-top: 10px; }
-.browser-empty { grid-column: 1/-1; text-align: center; padding: 3rem; color: var(--text-muted); font-size: 14px; }
+.browser-empty { text-align: center; padding: 3rem; color: var(--text-muted); font-size: 14px; }
 
 /* ══ PERFIL DE ALUMNO ══ */
 .perfil-back { display:flex;align-items:center;gap:8px;margin-bottom:16px;cursor:pointer;color:var(--text-secondary);font-size:13px;width:fit-content; }
@@ -632,6 +641,7 @@ tr:hover td { background: #faf9f7; }
           <select class="filter-select" id="filter-grupo" onchange="renderBiblioteca()"><option value="">Todos los grupos</option><option>Fuerza</option><option>Deportivo</option><option>Musculación</option></select>
           <select class="filter-select" id="filter-fase" onchange="renderBiblioteca()"><option value="">Todas las fases</option><option>Fase 1</option><option>Fase 2</option><option>Fase 3</option><option>Fase 4</option><option>Fase 5</option></select>
           <select class="filter-select" id="filter-subfase" onchange="renderBiblioteca()"><option value="">Todas las subfases</option><option>Subfase A</option><option>Subfase B</option><option>Subfase C</option></select>
+          <input class="search-input" id="search-biblioteca" style="margin:0;max-width:220px" type="text" placeholder="Buscar plan..." oninput="renderBiblioteca()" />
           <div style="font-size:12px;color:var(--text-muted)" id="browser-count"></div>
           <button class="btn btn-dark" style="margin-left:auto" onclick="bibliotecaCrearPlan()">+ Crear plan</button>
         </div>
@@ -949,7 +959,7 @@ let historialPlanes={};
 function initNextTId(){ const all=semanas.flatMap(s=>s.turnos); nextTId=all.length?Math.max(...all.map(t=>t.id))+1:1; }
 
 // Genera 6 ejercicios vacíos con exactamente 4 series por semana
-function ejeVacio(id){return{id,nombre:'',reps:{S1:['','','',''],S2:['','','',''],S3:['','','',''],S4:['','','','']},kgs:{S1:['','','',''],S2:['','','',''],S3:['','','',''],S4:['','','','']}}}
+function ejeVacio(id,letra='A'){return{id,nombre:'',letra,reps:{S1:['','','','',''],S2:['','','','',''],S3:['','','','',''],S4:['','','','','']},kgs:{S1:['','','','',''],S2:['','','','',''],S3:['','','','',''],S4:['','','','','']}}}
 // Genera 3 ejercicios de activación vacíos
 function actVacia(){return[{id:'a1',nombre:''},{id:'a2',nombre:''},{id:'a3',nombre:''}]}
 
@@ -2257,9 +2267,13 @@ function renderEje(dn,bid,eje,sC){
   const kC=sC.map(({s,n})=>{const v=(eje.kgs&&eje.kgs[s])||[];return`<div class="eje-vals-cell">${Array.from({length:n},(_,i)=>`<input class="val-input" value="${v[i]||''}" placeholder="kg" oninput="setVal(${dn},'${bid}','${eje.id}','kgs','${s}',${i},this.value)"/>`).join('')}</div>`;}).join('');
   const lR=sC.map(({s,n})=>`<div class="eje-sem-cell"><div class="serie-labels">${Array.from({length:n},(_,i)=>`<span class="serie-label">S${i+1}</span>`).join('')}</div></div>`).join('');
   const acId=`ac-eje-${eje.id}`;
+  const letra = eje.letra||'A';
+  const letrasOpts = ['A','B','C','D','E','F'].map(l=>`<option value="${l}" ${l===letra?'selected':''}>${l}</option>`).join('');
   return`<div class="ejercicio-row">
     <div class="eje-name-row">
       <div class="eje-name-cell" style="overflow:visible;position:relative">
+        <select title="Grupo de ejercicio" onchange="getPlanEje(${dn},'${bid}','${eje.id}').letra=this.value"
+          style="width:34px;border:1px solid var(--card-border);border-radius:4px;font-size:12px;font-weight:700;padding:2px 1px;background:#f0f0f0;cursor:pointer;flex-shrink:0;text-align:center">${letrasOpts}</select>
         <div class="ac-wrap" style="flex:1">
           <input class="eje-name-input" id="inp-${eje.id}"
             value="${(eje.nombre||'').replace(/"/g,'&quot;')}"
@@ -2284,7 +2298,7 @@ function getPlanDia(n){return planDias.find(d=>d.num==n);}
 function getPlanBloque(n,bid){const d=getPlanDia(n);return d?d.bloques.find(b=>b.id===bid):null;}
 function getPlanEje(n,bid,eid){const b=getPlanBloque(n,bid);return b?b.ejercicios.find(e=>e.id===eid):null;}
 function setVal(n,bid,eid,tipo,s,i,v){const e=getPlanEje(n,bid,eid);if(!e)return;if(!e[tipo])e[tipo]={};if(!e[tipo][s])e[tipo][s]=[];e[tipo][s][i]=v;}
-function addEje(n,bid){const b=getPlanBloque(n,bid);if(!b)return;b.ejercicios.push({id:'e'+Date.now(),nombre:'',reps:{S1:['','','',''],S2:['','','',''],S3:['','','',''],S4:['','','','']},kgs:{S1:['','','',''],S2:['','','',''],S3:['','','',''],S4:['','','','']}});renderDias();}
+function addEje(n,bid){const b=getPlanBloque(n,bid);if(!b)return;const id='e'+Date.now();b.ejercicios.push(ejeVacio(id,'A'));renderDias();}
 
 function eliminarEjeDelPlan(dn,bid,eid){
   const b=getPlanBloque(dn,bid);
@@ -2377,30 +2391,66 @@ function renderSavedInEditor(){
   </div>`).join('');
 }
 
+let bibSortCol = 'nombre';
+let bibSortDir = 'asc';
+
+function sortBiblioteca(col){
+  if(bibSortCol===col){ bibSortDir = bibSortDir==='asc'?'desc':'asc'; }
+  else { bibSortCol=col; bibSortDir='asc'; }
+  renderBiblioteca();
+}
+
 function renderBiblioteca(){
   const fg=document.getElementById('filter-grupo').value;
   const ff=document.getElementById('filter-fase').value;
   const fs=document.getElementById('filter-subfase').value;
-  const filt=savedPlans.filter(p=>{
-    if(p.nombre_libre) return true; // los planes libres siempre aparecen
-    return(!fg||p.grupo===fg)&&(!ff||p.fase===ff)&&(!fs||p.subfase===fs);
+  const fq=(document.getElementById('search-biblioteca')?.value||'').toLowerCase().trim();
+  let filt=savedPlans.filter(p=>{
+    if(!p.nombre_libre && fg && p.grupo!==fg) return false;
+    if(!p.nombre_libre && ff && p.fase!==ff) return false;
+    if(!p.nombre_libre && fs && p.subfase!==fs) return false;
+    if(fq && !planDisplayName(p).toLowerCase().includes(fq) &&
+       !(p.objetivo||'').toLowerCase().includes(fq)) return false;
+    return true;
+  });
+  filt.sort((a,b)=>{
+    let va='', vb='';
+    if(bibSortCol==='nombre'){ va=planDisplayName(a).toLowerCase(); vb=planDisplayName(b).toLowerCase(); }
+    else if(bibSortCol==='fecha'){ va=a.fecha||''; vb=b.fecha||''; }
+    else if(bibSortCol==='objetivo'){ va=(a.objetivo||'').toLowerCase(); vb=(b.objetivo||'').toLowerCase(); }
+    return bibSortDir==='asc'?va.localeCompare(vb):vb.localeCompare(va);
   });
   document.getElementById('browser-count').textContent=filt.length+' plan'+(filt.length!==1?'es':'');
   const g=document.getElementById('browser-grid');
-  if(!filt.length){g.innerHTML='<div class="browser-empty">No hay planes guardados con esos filtros.</div>';return;}
-  g.innerHTML=filt.map(p=>{const ri=savedPlans.indexOf(p);return`<div class="browser-card">
-    <div class="browser-card-top"><div class="browser-card-title">${planDisplayName(p)}</div></div>
-    <div class="browser-card-tags">
-      ${p.nombre_libre ? `<span class="ptag" style="background:#e8f0fb;color:#2c5aa0">📝 Personalizado</span>` : `${ptagGrupo(p.grupo)}<span class="ptag ptag-fase">${p.fase}</span><span class="ptag ptag-sub">${p.subfase}</span>`}
-    </div>
-    <div class="browser-card-meta">${p.objetivo?'Objetivo: '+p.objetivo+'<br>':''}Guardado: ${p.fecha||'—'}</div>
-    <div class="browser-card-actions">
-      <button class="act-btn" onclick="imprimirPlanDirecto(${ri})">🖨 Imprimir</button>
-      <button class="act-btn" onclick="cargarPlan(${ri})">Editar</button>
-      <button class="act-btn del" onclick="eliminarPlan(${ri})">Eliminar</button>
-    </div>
-  </div>`;}).join('');
+  if(!filt.length){g.innerHTML='<div class="browser-empty">No hay planes con esos filtros.</div>';return;}
+  const sortArrow = col => {
+    if(bibSortCol===col) return bibSortDir==='asc'?' ▲':' ▼';
+    return ' ⇅';
+  };
+  g.innerHTML=`<table class="browser-list-table">
+    <thead><tr>
+      <th onclick="sortBiblioteca('nombre')" style="cursor:pointer">Nombre${sortArrow('nombre')}</th>
+      <th onclick="sortBiblioteca('objetivo')" style="cursor:pointer">Objetivo${sortArrow('objetivo')}</th>
+      <th onclick="sortBiblioteca('fecha')" style="cursor:pointer;width:110px">Guardado${sortArrow('fecha')}</th>
+      <th style="width:210px">Acciones</th>
+    </tr></thead>
+    <tbody>
+    ${filt.map(p=>{const ri=savedPlans.indexOf(p);return`<tr>
+      <td><div style="font-weight:500;margin-bottom:3px">${planDisplayName(p)}</div>
+        <div>${p.nombre_libre?`<span class="ptag" style="background:#e8f0fb;color:#2c5aa0;font-size:10px">📝 Personalizado</span>`:`${ptagGrupo(p.grupo)}<span class="ptag ptag-fase" style="font-size:10px">${p.fase||''}</span><span class="ptag ptag-sub" style="font-size:10px">${p.subfase||''}</span>`}</div>
+      </td>
+      <td style="color:var(--text-secondary);font-size:12px">${p.objetivo||'—'}</td>
+      <td style="color:var(--text-muted);font-size:12px">${p.fecha||'—'}</td>
+      <td><div class="row-actions">
+        <button class="act-btn" onclick="imprimirPlanDirecto(${ri})">🖨 Imprimir</button>
+        <button class="act-btn" onclick="cargarPlan(${ri})">Editar</button>
+        <button class="act-btn del" onclick="eliminarPlan(${ri})">Eliminar</button>
+      </div></td>
+    </tr>`;}).join('')}
+    </tbody>
+  </table>`;
 }
+
 
 function cargarPlan(idx){
   showConfirm('¿Editar este plan?','Se abrirá en el editor. Los cambios no guardados se perderán.',()=>{
@@ -3136,7 +3186,7 @@ function imprimirPlan() {
 
     let rows = '';
     bloque.ejercicios.forEach((eje, ei) => {
-      const letra = LETRAS[ei] || String.fromCharCode(65 + Math.floor(ei/2));
+      const letra = eje.letra || LETRAS[ei] || 'A';
       rows += `<tr>
         <td rowspan="3" style="width:9px;font-size:6pt;font-weight:700;text-align:center;background:#f0f0f0;border:1px solid #999;vertical-align:middle;padding:0">${letra}</td>
         <td rowspan="3" style="width:9px;border:0.3px solid #ddd;background:#f5f5f5"></td>
