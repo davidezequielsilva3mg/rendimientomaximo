@@ -372,7 +372,9 @@ tr:hover td { background: #faf9f7; }
     <nav class="sidebar-nav">
       <div class="nav-item active" onclick="switchTab('alumnos',this)"><span class="nav-icon">👤</span> Alumnos</div>
       <div class="nav-item" onclick="switchTab('profesores',this)"><span class="nav-icon">🏋️</span> Profesores</div>
-      <div class="nav-item" onclick="switchTab('planes',this)"><span class="nav-icon">📋</span> Planes</div>
+      <div class="nav-item" onclick="switchTab('ejercicios',this)"><span class="nav-icon">💪</span> Ejercicios</div>
+      <div class="nav-item" onclick="switchTab('biblioteca',this)"><span class="nav-icon">📚</span> Biblioteca de planes</div>
+      <div class="nav-item" onclick="switchTab('asignar',this)"><span class="nav-icon">📋</span> Asignar plan</div>
       <div class="nav-item" onclick="switchTab('config',this)"><span class="nav-icon">⚙️</span> Configuración</div>
     </nav>
     <div class="sidebar-footer">v1.0 · en desarrollo</div>
@@ -521,8 +523,8 @@ tr:hover td { background: #faf9f7; }
     </div>
 
     <!-- ══ PLANES ══ -->
-    <div id="tab-planes" class="tab-content" style="min-height:0">
-      <div class="planes-subtabs" style="flex-shrink:0">
+    <div id="tab-asignar" class="tab-content" style="min-height:0">
+      <div class="planes-subtabs" style="flex-shrink:0;display:none">
         <button class="planes-subtab active" id="pstab-rutinas" onclick="switchPlanesSubtab('rutinas')">Rutinas</button>
         <button class="planes-subtab" id="pstab-biblioteca" onclick="switchPlanesSubtab('biblioteca')">Biblioteca de planes</button>
         <button class="planes-subtab" id="pstab-ejercicios" onclick="switchPlanesSubtab('ejercicios')">Ejercicios</button>
@@ -1009,10 +1011,13 @@ function switchTab(tab,el){
   document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
   document.getElementById('tab-'+tab).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  if(el)el.classList.add('active');
-  if(tab==='planes'){switchPlanesSubtab('rutinas');}
+  if(el) el.classList.add('active');
+
+  if(tab==='asignar'){ switchPlanesSubtab('rutinas'); }
   if(tab==='alumnos' && perfilAlumnoId){ volverListadoAlumnos(); }
-  if(tab==='config'){cargarFormConfig();}
+  if(tab==='config'){ cargarFormConfig(); }
+  if(tab==='ejercicios'){ renderEjerciciosTab(); }
+  if(tab==='biblioteca'){ renderBibliotecaTab(); }
 }
 function switchSubtabProf(tab,el){
   document.getElementById('subtab-prof-listado').style.display=tab==='listado'?'block':'none';
@@ -1039,6 +1044,35 @@ function switchPlanesSubtab(tab){
   if(tab==='biblioteca') renderBiblioteca();
   if(tab==='ejercicios') renderEjercicios();
   if(tab==='rutinas') wizardReset();
+}
+
+// ══ TABS STANDALONE: EJERCICIOS Y BIBLIOTECA ══
+function renderEjerciciosTab(){
+  // Sincronizar filtros con los del tab interno de planes
+  renderEjercicios();
+  // Copiar tbody al tab standalone
+  const src = document.getElementById('ejercicios-tbody');
+  const dst = document.getElementById('ejercicios-tbody-tab');
+  if(src && dst) dst.innerHTML = src.innerHTML;
+  // Copiar count
+  const cnt = document.getElementById('eje-count');
+  const cntTab = document.getElementById('eje-count-tab');
+  if(cnt && cntTab) cntTab.textContent = cnt.textContent;
+  // Sincronizar categorías en el select del tab
+  const srcSel = document.getElementById('filter-cat-eje');
+  const dstSel = document.getElementById('filter-cat-eje-tab');
+  if(srcSel && dstSel) dstSel.innerHTML = srcSel.innerHTML;
+}
+
+function renderBibliotecaTab(){
+  renderBiblioteca();
+  // Copiar grid al tab standalone
+  const src = document.getElementById('browser-grid');
+  const dst = document.getElementById('browser-grid-tab');
+  if(src && dst) dst.innerHTML = src.innerHTML;
+  const cnt = document.getElementById('browser-count');
+  const cntTab = document.getElementById('browser-count-tab');
+  if(cnt && cntTab) cntTab.textContent = cnt.textContent;
 }
 
 // ══ CONFIGURACIÓN ══
@@ -1424,7 +1458,7 @@ function abrirPersonalizar(asigId){
   document.getElementById('meta-nombre').value = alumno?`${alumno.nombre} ${alumno.apellido}`:'';
 
   // Ir a la pestaña de planes, editor
-  switchTab('planes', document.querySelector('.nav-item:nth-child(3)'));
+  switchTab('asignar', document.querySelector('.nav-item:nth-child(5)'));
   // Abrir editor en wizard
   wizardAlumnoId = null;
   document.getElementById('wz-alumno-info').style.display = 'none';
