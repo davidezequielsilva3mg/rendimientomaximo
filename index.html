@@ -678,6 +678,46 @@ tr:hover td { background: #faf9f7; }
       </div>
 
     </div>
+    <!-- ══ TAB EJERCICIOS (standalone) ══ -->
+    <div id="tab-ejercicios" class="tab-content" style="min-height:0">
+      <div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+        <div class="topbar" style="flex-shrink:0">
+          <div><div class="page-title">Ejercicios</div><div class="page-sub">Biblioteca de ejercicios</div></div>
+          <div style="display:flex;gap:8px">
+            <label class="btn btn-ghost" style="cursor:pointer">📥 Importar Excel<input type="file" accept=".xlsx" style="display:none" onchange="importarExcel(this)" /></label>
+            <button class="btn btn-ghost" style="color:#c0392b;border-color:#c0392b" onclick="borrarTodosEjercicios()">🗑 Borrar todos</button>
+            <button class="btn btn-dark" onclick="openEjeModal()">+ Nuevo ejercicio</button>
+          </div>
+        </div>
+        <div style="padding:12px 28px;border-bottom:1px solid var(--card-border);display:flex;align-items:center;gap:12px;flex-shrink:0;flex-wrap:wrap">
+          <input class="search-input" style="margin:0;max-width:280px" type="text" id="search-ejercicios-tab" placeholder="Buscar ejercicio..." oninput="renderEjerciciosTab()" />
+          <select class="filter-select" id="filter-cat-eje-tab" onchange="renderEjerciciosTab()"><option value="">Todas las categorías</option></select>
+          <div style="font-size:12px;color:var(--text-muted)" id="eje-count-tab"></div>
+        </div>
+        <div style="flex:1;overflow-y:auto;padding:18px 28px">
+          <div class="table-wrap"><table>
+            <thead><tr><th>Ejercicio</th><th>Categoría</th><th>Subcategoría</th><th>Acciones</th></tr></thead>
+            <tbody id="ejercicios-tbody-tab"></tbody>
+          </table></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TAB BIBLIOTECA (standalone) ══ -->
+    <div id="tab-biblioteca" class="tab-content" style="min-height:0">
+      <div class="plan-browser" style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+        <div class="browser-filters">
+          <select class="filter-select" id="filter-grupo-tab" onchange="renderBibliotecaTab()"><option value="">Todos los grupos</option><option>Fuerza</option><option>Deportivo</option><option>Musculación</option></select>
+          <select class="filter-select" id="filter-fase-tab" onchange="renderBibliotecaTab()"><option value="">Todas las fases</option><option>Fase 1</option><option>Fase 2</option><option>Fase 3</option><option>Fase 4</option><option>Fase 5</option></select>
+          <select class="filter-select" id="filter-subfase-tab" onchange="renderBibliotecaTab()"><option value="">Todas las subfases</option><option>Subfase A</option><option>Subfase B</option><option>Subfase C</option></select>
+          <input class="search-input" id="search-biblioteca-tab" style="margin:0;max-width:220px" type="text" placeholder="Buscar plan..." oninput="renderBibliotecaTab()" />
+          <div style="font-size:12px;color:var(--text-muted)" id="browser-count-tab"></div>
+          <button class="btn btn-dark" style="margin-left:auto" onclick="bibliotecaCrearPlan()">+ Crear plan</button>
+        </div>
+        <div class="browser-grid" id="browser-grid-tab"></div>
+      </div>
+    </div>
+
     <div id="tab-config" class="tab-content" style="min-height:0">
       <div class="topbar">
         <div><div class="page-title">Configuración</div><div class="page-sub">Datos del gimnasio</div></div>
@@ -1048,31 +1088,78 @@ function switchPlanesSubtab(tab){
 
 // ══ TABS STANDALONE: EJERCICIOS Y BIBLIOTECA ══
 function renderEjerciciosTab(){
-  // Sincronizar filtros con los del tab interno de planes
-  renderEjercicios();
-  // Copiar tbody al tab standalone
-  const src = document.getElementById('ejercicios-tbody');
-  const dst = document.getElementById('ejercicios-tbody-tab');
-  if(src && dst) dst.innerHTML = src.innerHTML;
-  // Copiar count
-  const cnt = document.getElementById('eje-count');
-  const cntTab = document.getElementById('eje-count-tab');
-  if(cnt && cntTab) cntTab.textContent = cnt.textContent;
-  // Sincronizar categorías en el select del tab
-  const srcSel = document.getElementById('filter-cat-eje');
-  const dstSel = document.getElementById('filter-cat-eje-tab');
-  if(srcSel && dstSel) dstSel.innerHTML = srcSel.innerHTML;
+  const q=(document.getElementById('search-ejercicios-tab').value||'').toLowerCase();
+  const catSelect=document.getElementById('filter-cat-eje-tab');
+  const cat=catSelect.value;
+
+  const categorias=[...new Set(ejercicios.map(e=>e.categoria).filter(Boolean))].sort();
+  catSelect.innerHTML='<option value="">Todas las categorías</option>'+
+    categorias.map(c=>`<option value="${c}" ${c===cat?'selected':''}>${c}</option>`).join('');
+
+  const f=ejercicios.filter(e=>
+    (!q||e.nombre.toLowerCase().includes(q)||(e.categoria||'').toLowerCase().includes(q)||(e.subcategoria||'').toLowerCase().includes(q))&&
+    (!cat||e.categoria===cat)
+  );
+  document.getElementById('eje-count-tab').textContent=f.length+' ejercicio'+(f.length!==1?'s':'');
+  const tbody=document.getElementById('ejercicios-tbody-tab');
+  if(!f.length){tbody.innerHTML=`<tr><td colspan="4" class="empty">No se encontraron ejercicios</td></tr>`;return;}
+  tbody.innerHTML=f.map(e=>`<tr>
+    <td><span style="font-weight:500">${e.nombre}</span></td>
+    <td><span class="cat-pill ${catClass(e.categoria)}">${e.categoria||'—'}</span></td>
+    <td style="font-size:12px;color:var(--text-secondary)">${e.subcategoria||'—'}</td>
+    <td><div class="row-actions">
+      <button class="act-btn" onclick="editEjercicio(${e.id})">Editar</button>
+      <button class="act-btn del" onclick="deleteEjercicio(${e.id})">Eliminar</button>
+    </div></td>
+  </tr>`).join('');
 }
 
 function renderBibliotecaTab(){
-  renderBiblioteca();
-  // Copiar grid al tab standalone
-  const src = document.getElementById('browser-grid');
-  const dst = document.getElementById('browser-grid-tab');
-  if(src && dst) dst.innerHTML = src.innerHTML;
-  const cnt = document.getElementById('browser-count');
-  const cntTab = document.getElementById('browser-count-tab');
-  if(cnt && cntTab) cntTab.textContent = cnt.textContent;
+  const fg=document.getElementById('filter-grupo-tab').value;
+  const ff=document.getElementById('filter-fase-tab').value;
+  const fs=document.getElementById('filter-subfase-tab').value;
+  const fq=(document.getElementById('search-biblioteca-tab').value||'').toLowerCase().trim();
+
+  let filt=savedPlans.filter(p=>{
+    if(!p.nombre_libre && fg && p.grupo!==fg) return false;
+    if(!p.nombre_libre && ff && p.fase!==ff) return false;
+    if(!p.nombre_libre && fs && p.subfase!==fs) return false;
+    if(fq && !planDisplayName(p).toLowerCase().includes(fq) &&
+       !(p.objetivo||'').toLowerCase().includes(fq)) return false;
+    return true;
+  });
+
+  filt.sort((a,b)=>{
+    let va=planDisplayName(a).toLowerCase(), vb=planDisplayName(b).toLowerCase();
+    return bibSortDir==='asc'?va.localeCompare(vb):vb.localeCompare(va);
+  });
+
+  document.getElementById('browser-count-tab').textContent=filt.length+' plan'+(filt.length!==1?'es':'');
+  const g=document.getElementById('browser-grid-tab');
+  if(!filt.length){g.innerHTML='<div class="browser-empty">No hay planes con esos filtros.</div>';return;}
+
+  g.innerHTML=`<table class="browser-list-table">
+    <thead><tr>
+      <th>Nombre</th>
+      <th>Objetivo</th>
+      <th style="width:110px">Guardado</th>
+      <th style="width:210px">Acciones</th>
+    </tr></thead>
+    <tbody>
+    ${filt.map(p=>{const ri=savedPlans.indexOf(p);return`<tr>
+      <td><div style="font-weight:500;margin-bottom:3px">${planDisplayName(p)}</div>
+        <div>${p.nombre_libre?`<span class="ptag" style="background:#e8f0fb;color:#2c5aa0;font-size:10px">📝 Personalizado</span>`:`${ptagGrupo(p.grupo)}<span class="ptag ptag-fase" style="font-size:10px">${p.fase||''}</span><span class="ptag ptag-sub" style="font-size:10px">${p.subfase||''}</span>`}</div>
+      </td>
+      <td style="color:var(--text-secondary);font-size:12px">${p.objetivo||'—'}</td>
+      <td style="color:var(--text-muted);font-size:12px">${p.fecha||'—'}</td>
+      <td><div class="row-actions">
+        <button class="act-btn" onclick="imprimirPlanDirecto(${ri})">🖨 Imprimir</button>
+        <button class="act-btn" onclick="cargarPlan(${ri})">Editar</button>
+        <button class="act-btn del" onclick="eliminarPlan(${ri})">Eliminar</button>
+      </div></td>
+    </tr>`;}).join('')}
+    </tbody>
+  </table>`;
 }
 
 // ══ CONFIGURACIÓN ══
