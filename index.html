@@ -2657,8 +2657,9 @@ function bibliotecaCrearPlan(){
   updateAssignBadge();
   renderDias();
   renderSavedInEditor();
-  // Ir a la subtab Rutinas y mostrar el editor directamente (sin alumno)
-  switchPlanesSubtab('rutinas');
+  // Cambiar al tab Asignar plan y mostrar el editor directamente
+  const navItem = document.querySelector('.nav-item:nth-child(5)');
+  switchTab('asignar', navItem);
   wizardAlumnoId = null;
   document.getElementById('wz-alumno-info').style.display = 'none';
   document.getElementById('wz-step1-badge').className = 'wz-step-badge done';
