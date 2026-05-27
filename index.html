@@ -3684,8 +3684,8 @@ function imprimirPlan() {
       const cols = i < 2 ? colsXAct : colsUltima;
       const labelCols = 1;
       const valCols = cols - labelCols;
-      return `<td colspan="${labelCols}" style="border:1px solid #555;padding:1px 3px;font-size:5pt;font-weight:700;background:#333;color:#aaa;white-space:nowrap;text-align:center">ACT.${i+1}</td>
-              <td colspan="${valCols}" style="border:1px solid #555;padding:1px 5px;font-size:6pt;color:#fff;background:#222;font-weight:500">${nombre}</td>`;
+      return `<td colspan="${labelCols}" style="border:1px solid #999;padding:1px 3px;font-size:5pt;font-weight:700;background:#fff;color:#555;white-space:nowrap;text-align:center">ACT.${i+1}</td>
+              <td colspan="${valCols}" style="border:1px solid #999;padding:1px 5px;font-size:6pt;color:#000;background:#fff;font-weight:600">${nombre}</td>`;
     }).join('');
 
     // Borde grueso entre semanas
