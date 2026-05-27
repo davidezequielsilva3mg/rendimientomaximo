@@ -550,9 +550,10 @@ tr:hover td { background: #faf9f7; }
             <button onclick="wizardReset()" style="margin-left:10px;background:none;border:none;cursor:pointer;font-size:11px;color:var(--text-muted);text-decoration:underline">cambiar</button>
           </div>
           <!-- Botones acción del editor -->
-          <div id="wz-editor-actions" style="display:none;gap:8px;display:none">
+          <div id="wz-editor-actions" style="display:none;gap:8px;align-items:center">
             <button class="btn btn-ghost" onclick="imprimirPlan()">🖨 Imprimir</button>
-            <button class="btn btn-green" onclick="guardarPlan()">Guardar plan</button>
+            <button class="btn btn-ghost" onclick="guardarPlan()" title="Guarda o actualiza el plan en la biblioteca">💾 Guardar en biblioteca</button>
+            <button class="btn btn-green" id="btn-guardar-alumno" onclick="guardarEnAlumno()" title="Guarda el plan en el historial del alumno sin modificar la biblioteca" style="display:none">✓ Guardar en alumno</button>
           </div>
         </div>
 
@@ -2574,9 +2575,8 @@ function wizardElegirTipo(tipo){
     renderDias();
     renderSavedInEditor();
     wizardShowPaso('wz-paso3-editor');
-    // Mostrar botones del editor
-    const wa = document.getElementById('wz-editor-actions');
-    wa.style.display = 'flex';
+    document.getElementById('wz-editor-actions').style.display = 'flex';
+    document.getElementById('btn-guardar-alumno').style.display = wizardAlumnoId ? 'block' : 'none';
   }
 }
 
@@ -2666,6 +2666,7 @@ function bibliotecaCrearPlan(){
   document.getElementById('wz-step3-badge').className = 'wz-step-badge active';
   wizardShowPaso('wz-paso3-editor');
   document.getElementById('wz-editor-actions').style.display = 'flex';
+  document.getElementById('btn-guardar-alumno').style.display = 'none';
   document.getElementById('plan-editor-content').scrollTop = 0;
 }
 
@@ -2692,6 +2693,40 @@ function wizardEditarPrearmado(idx){
 
 // Sobreescribir guardarPlan para que también asigne al alumno si hay uno en el wizard
 const _guardarPlanOriginal = guardarPlan;
+
+async function guardarEnAlumno(){
+  if(!wizardAlumnoId){ toast('No hay alumno seleccionado','#c0392b'); return; }
+  const alumno = alumnos.find(a=>a.id===wizardAlumnoId);
+  const g = document.getElementById('sel-grupo').value;
+  const f = document.getElementById('sel-fase').value;
+  const s = document.getElementById('sel-subfase').value;
+  const nl = document.getElementById('sel-nombre-libre').value.trim();
+
+  // Guardar en historial_planes como plan personalizado
+  const asig = {
+    alumno_id: wizardAlumnoId,
+    fecha: new Date().toISOString().split('T')[0],
+    grupo: g||'',
+    fase: f||'',
+    subfase: s||'',
+    obs: nl || [g,f,s].filter(Boolean).join(' · '),
+    dias_semana: planDias.length,
+    plan_personalizado: { dias: JSON.parse(JSON.stringify(planDias)) }
+  };
+
+  const {data:row} = await sb.from('historial_planes').insert(asig).select().single();
+  if(row){
+    if(!historialPlanes[wizardAlumnoId]) historialPlanes[wizardAlumnoId]=[];
+    historialPlanes[wizardAlumnoId].unshift(row);
+  }
+
+  toast(`✓ Plan guardado en el perfil de ${alumno.nombre} ${alumno.apellido}`);
+
+  // Imprimir automáticamente
+  imprimirPlan();
+
+  wizardReset();
+}
 
 // ══ PLANES — EDITOR ══
 function updateAssignBadge(){
@@ -2852,28 +2887,9 @@ async function guardarPlan(){
     toast('Plan guardado en biblioteca');
   }
 
-  // Si hay alumno seleccionado en el wizard → asignar automáticamente
-  if(wizardAlumnoId && savedPlan){
-    const alumno = alumnos.find(a=>a.id===wizardAlumnoId);
-    const asig = {
-      alumno_id: wizardAlumnoId,
-      fecha: new Date().toISOString().split('T')[0],
-      grupo: plan.grupo||'',
-      fase: plan.fase||'',
-      subfase: plan.subfase||'',
-      obs: plan.nombre_libre||'',
-      dias_semana: plan.dias?.length||3,
-      plan_personalizado: null
-    };
-    const {data:row} = await sb.from('historial_planes').insert(asig).select().single();
-    if(row){
-      if(!historialPlanes[wizardAlumnoId]) historialPlanes[wizardAlumnoId]=[];
-      historialPlanes[wizardAlumnoId].unshift(row);
-    }
-    toast(`✓ Plan guardado y asignado a ${alumno.nombre} ${alumno.apellido}`);
-    wizardReset();
-  }
-
+  // Si hay alumno en el wizard, NO asignar automáticamente
+  // El usuario debe usar "Guardar en alumno" para eso
+  toast(ei>=0 ? 'Plan actualizado en biblioteca' : 'Plan guardado en biblioteca');
   renderSavedInEditor(); renderBiblioteca();
 }
 
