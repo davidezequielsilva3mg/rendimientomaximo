@@ -375,6 +375,7 @@ tr:hover td { background: #faf9f7; }
       <div class="nav-item" onclick="switchTab('ejercicios',this)"><span class="nav-icon">💪</span> Ejercicios</div>
       <div class="nav-item" onclick="switchTab('biblioteca',this)"><span class="nav-icon">📚</span> Biblioteca de planes</div>
       <div class="nav-item" onclick="switchTab('asignar',this)"><span class="nav-icon">📋</span> Asignar plan</div>
+      <div class="nav-item" onclick="switchTab('indumentaria',this)"><span class="nav-icon">👕</span> Indumentaria</div>
       <div class="nav-item" onclick="switchTab('config',this)"><span class="nav-icon">⚙️</span> Configuración</div>
     </nav>
     <div class="sidebar-footer">v1.0 · en desarrollo</div>
@@ -718,6 +719,110 @@ tr:hover td { background: #faf9f7; }
       </div>
     </div>
 
+    <!-- ══ TAB INDUMENTARIA ══ -->
+    <div id="tab-indumentaria" class="tab-content" style="min-height:0">
+      <div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+
+        <!-- Subtabs -->
+        <div class="planes-subtabs" style="flex-shrink:0">
+          <button class="planes-subtab active" id="pstab-indu-stock" onclick="switchInduTab('stock',this)">📦 Stock</button>
+          <button class="planes-subtab" id="pstab-indu-venta" onclick="switchInduTab('venta',this)">🛒 Nueva venta</button>
+          <button class="planes-subtab" id="pstab-indu-historial" onclick="switchInduTab('historial',this)">📋 Historial</button>
+        </div>
+
+        <!-- STOCK -->
+        <div id="indu-stock" style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+          <div style="padding:12px 28px;border-bottom:1px solid var(--card-border);display:flex;align-items:center;gap:12px;flex-shrink:0;flex-wrap:wrap">
+            <input class="search-input" style="margin:0;max-width:260px" type="text" id="search-indu" placeholder="Buscar producto..." oninput="renderStock()" />
+            <div style="font-size:12px;color:var(--text-muted)" id="indu-count"></div>
+            <button class="btn btn-dark" style="margin-left:auto" onclick="openInduModal()">+ Nuevo producto</button>
+          </div>
+          <!-- Stats -->
+          <div style="padding:14px 28px;display:flex;gap:12px;flex-shrink:0;flex-wrap:wrap">
+            <div class="stat-card dark" style="min-width:140px"><div class="stat-label">Productos</div><div class="stat-value" id="indu-stat-total">0</div></div>
+            <div class="stat-card" style="min-width:140px"><div class="stat-label">Valor en stock</div><div class="stat-value" id="indu-stat-valor">$0</div></div>
+            <div class="stat-card" style="min-width:140px"><div class="stat-label">Total vendido</div><div class="stat-value" id="indu-stat-vendido">$0</div></div>
+            <div class="stat-card" style="min-width:140px;border-color:#f5c6cb"><div class="stat-label">Deuda pendiente</div><div class="stat-value" style="color:#c0392b" id="indu-stat-deuda">$0</div></div>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:0 28px 18px">
+            <div class="table-wrap"><table>
+              <thead><tr><th>Producto</th><th>Talla</th><th>Color</th><th>Stock</th><th>Precio</th><th>Ingreso</th><th>Acciones</th></tr></thead>
+              <tbody id="indu-tbody"></tbody>
+            </table></div>
+          </div>
+        </div>
+
+        <!-- NUEVA VENTA -->
+        <div id="indu-venta" style="display:none;flex-direction:column;flex:1;overflow-y:auto;padding:24px 28px">
+          <div style="max-width:560px;margin:0 auto;width:100%">
+            <div style="font-size:18px;font-weight:500;margin-bottom:20px">Registrar venta</div>
+            <div style="display:flex;flex-direction:column;gap:16px">
+              <div class="form-group">
+                <label class="form-label">Alumno *</label>
+                <div style="position:relative">
+                  <input class="form-input" id="venta-alumno-input" type="text" placeholder="Buscar alumno..." oninput="ventaBuscarAlumno(this.value)" autocomplete="off" />
+                  <div id="venta-alumno-drop" style="display:none;position:absolute;left:0;right:0;top:100%;background:#fff;border:1px solid var(--card-border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.1);z-index:200;max-height:220px;overflow-y:auto"></div>
+                </div>
+                <div id="venta-alumno-sel" style="display:none;margin-top:8px;padding:8px 12px;background:#f0f9f0;border-radius:6px;font-size:13px;display:flex;align-items:center;justify-content:space-between">
+                  <span id="venta-alumno-nombre"></span>
+                  <button onclick="ventaLimpiarAlumno()" style="background:none;border:none;cursor:pointer;color:#999;font-size:16px">×</button>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Producto *</label>
+                <select class="form-input" id="venta-producto" onchange="ventaSelProducto()">
+                  <option value="">— Seleccioná un producto —</option>
+                </select>
+              </div>
+              <div id="venta-producto-info" style="display:none;padding:10px 14px;background:#f9f9f9;border-radius:8px;font-size:13px;color:var(--text-secondary)"></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <div class="form-group">
+                  <label class="form-label">Cantidad *</label>
+                  <input class="form-input" id="venta-cantidad" type="number" min="1" value="1" oninput="ventaCalcTotal()" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Precio unitario</label>
+                  <input class="form-input" id="venta-precio" type="number" step="0.01" placeholder="0.00" oninput="ventaCalcTotal()" />
+                </div>
+              </div>
+              <div style="padding:12px 14px;background:#111;color:#fff;border-radius:8px;font-size:15px;font-weight:600;display:flex;justify-content:space-between;align-items:center">
+                <span>Total</span>
+                <span id="venta-total">$0.00</span>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Pago</label>
+                <select class="form-input" id="venta-pagado">
+                  <option value="false">❌ No pagado</option>
+                  <option value="true">✅ Pagado</option>
+                </select>
+              </div>
+              <button class="btn btn-dark" style="width:100%;padding:12px;font-size:14px" onclick="registrarVenta()">Registrar venta</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- HISTORIAL -->
+        <div id="indu-historial" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+          <div style="padding:12px 28px;border-bottom:1px solid var(--card-border);display:flex;align-items:center;gap:12px;flex-shrink:0;flex-wrap:wrap">
+            <input class="search-input" style="margin:0;max-width:260px" type="text" id="search-ventas" placeholder="Buscar por alumno o producto..." oninput="renderHistorialVentas()" />
+            <select class="filter-select" id="filter-pagado" onchange="renderHistorialVentas()">
+              <option value="">Todos</option>
+              <option value="false">No pagados</option>
+              <option value="true">Pagados</option>
+            </select>
+            <div style="font-size:12px;color:var(--text-muted)" id="ventas-count"></div>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:0 28px 18px">
+            <div class="table-wrap"><table>
+              <thead><tr><th>Fecha</th><th>Alumno</th><th>Producto</th><th>Cantidad</th><th>Total</th><th>Estado</th><th>Acciones</th></tr></thead>
+              <tbody id="ventas-tbody"></tbody>
+            </table></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
     <div id="tab-config" class="tab-content" style="min-height:0">
       <div class="topbar">
         <div><div class="page-title">Configuración</div><div class="page-sub">Datos del gimnasio</div></div>
@@ -877,6 +982,32 @@ tr:hover td { background: #faf9f7; }
 </div>
 
 <!-- Modal Ejercicio Activación -->
+<!-- Modal Indumentaria -->
+<div class="modal-overlay" id="indu-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="indu-modal-title">Nuevo producto</div>
+      <button class="modal-close" onclick="closeInduModal()">×</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="form-group"><label class="form-label">Nombre *</label><input class="form-input" id="indu-nombre" type="text" placeholder="Ej: Remera RM" /></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group"><label class="form-label">Talla</label><input class="form-input" id="indu-talla" type="text" placeholder="S, M, L, XL..." /></div>
+        <div class="form-group"><label class="form-label">Color</label><input class="form-input" id="indu-color" type="text" placeholder="Negro, Blanco..." /></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group"><label class="form-label">Cantidad</label><input class="form-input" id="indu-cantidad" type="number" min="0" placeholder="0" /></div>
+        <div class="form-group"><label class="form-label">Precio</label><input class="form-input" id="indu-precio" type="number" step="0.01" placeholder="0.00" /></div>
+      </div>
+      <div class="form-group"><label class="form-label">Fecha de ingreso</label><input class="form-input" id="indu-fecha" type="date" /></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeInduModal()">Cancelar</button>
+      <button class="btn btn-dark" onclick="saveIndu()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Alumno -->
 <div class="modal-overlay" id="alumno-modal">
   <div class="modal">
@@ -1057,7 +1188,7 @@ function switchTab(tab,el){
   if(tab==='alumnos' && perfilAlumnoId){ volverListadoAlumnos(); }
   if(tab==='config'){ cargarFormConfig(); }
   if(tab==='ejercicios'){ renderEjerciciosTab(); }
-  if(tab==='biblioteca'){ renderBibliotecaTab(); }
+  if(tab==='indumentaria'){ switchInduTab('stock', document.getElementById('pstab-indu-stock')); }
 }
 function switchSubtabProf(tab,el){
   document.getElementById('subtab-prof-listado').style.display=tab==='listado'?'block':'none';
@@ -1160,6 +1291,259 @@ function renderBibliotecaTab(){
     </tr>`;}).join('')}
     </tbody>
   </table>`;
+}
+
+// ══ INDUMENTARIA ══
+let indumentaria = [];
+let ventasIndu = [];
+let editInduId = null;
+let ventaAlumnoId = null;
+
+function switchInduTab(tab, el){
+  ['stock','venta','historial'].forEach(t=>{
+    const d = document.getElementById('indu-'+t);
+    if(d) d.style.display = t===tab ? 'flex' : 'none';
+  });
+  document.querySelectorAll('[id^="pstab-indu-"]').forEach(b=>b.classList.remove('active'));
+  if(el) el.classList.add('active');
+  if(tab==='stock') renderStock();
+  if(tab==='venta') renderVentaForm();
+  if(tab==='historial') renderHistorialVentas();
+}
+
+// ── STOCK ──
+function renderStock(){
+  const q=(document.getElementById('search-indu').value||'').toLowerCase();
+  const f=indumentaria.filter(p=>
+    p.nombre.toLowerCase().includes(q)||(p.talla||'').toLowerCase().includes(q)||(p.color||'').toLowerCase().includes(q)
+  );
+  document.getElementById('indu-count').textContent=f.length+' producto'+(f.length!==1?'s':'');
+  document.getElementById('indu-stat-total').textContent=indumentaria.length;
+  const valorStock=indumentaria.reduce((s,p)=>s+(p.precio||0)*(p.cantidad||0),0);
+  document.getElementById('indu-stat-valor').textContent='$'+valorStock.toLocaleString('es-AR',{minimumFractionDigits:0});
+  const totalVendido=ventasIndu.reduce((s,v)=>s+(v.total||0),0);
+  document.getElementById('indu-stat-vendido').textContent='$'+totalVendido.toLocaleString('es-AR',{minimumFractionDigits:0});
+  const deuda=ventasIndu.filter(v=>!v.pagado).reduce((s,v)=>s+(v.total||0),0);
+  document.getElementById('indu-stat-deuda').textContent='$'+deuda.toLocaleString('es-AR',{minimumFractionDigits:0});
+  const tbody=document.getElementById('indu-tbody');
+  if(!f.length){tbody.innerHTML='<tr><td colspan="7" class="empty">No hay productos cargados</td></tr>';return;}
+  tbody.innerHTML=f.map(p=>`<tr>
+    <td><strong>${p.nombre}</strong></td>
+    <td>${p.talla||'—'}</td>
+    <td>${p.color||'—'}</td>
+    <td><span style="font-weight:600;color:${p.cantidad<=0?'#c0392b':p.cantidad<=3?'#e67e22':'inherit'}">${p.cantidad||0}</span></td>
+    <td>$${(p.precio||0).toLocaleString('es-AR',{minimumFractionDigits:0})}</td>
+    <td style="font-size:12px;color:var(--text-muted)">${p.fecha_ingreso||'—'}</td>
+    <td><div class="row-actions">
+      <button class="act-btn" onclick="openInduModal(${p.id})">Editar</button>
+      <button class="act-btn del" onclick="deleteIndu(${p.id})">Eliminar</button>
+    </div></td>
+  </tr>`).join('');
+}
+
+function openInduModal(id=null){
+  editInduId=id;
+  document.getElementById('indu-modal-title').textContent=id?'Editar producto':'Nuevo producto';
+  if(id){
+    const p=indumentaria.find(x=>x.id===id);
+    document.getElementById('indu-nombre').value=p.nombre||'';
+    document.getElementById('indu-talla').value=p.talla||'';
+    document.getElementById('indu-color').value=p.color||'';
+    document.getElementById('indu-cantidad').value=p.cantidad||0;
+    document.getElementById('indu-precio').value=p.precio||0;
+    document.getElementById('indu-fecha').value=p.fecha_ingreso||'';
+  } else {
+    ['indu-nombre','indu-talla','indu-color','indu-fecha'].forEach(f=>document.getElementById(f).value='');
+    document.getElementById('indu-cantidad').value=0;
+    document.getElementById('indu-precio').value='';
+  }
+  document.getElementById('indu-modal').classList.add('open');
+}
+function closeInduModal(){document.getElementById('indu-modal').classList.remove('open');editInduId=null;}
+
+async function saveIndu(){
+  const nombre=document.getElementById('indu-nombre').value.trim();
+  if(!nombre){alert('El nombre es obligatorio');return;}
+  const data={
+    nombre,
+    talla:document.getElementById('indu-talla').value.trim(),
+    color:document.getElementById('indu-color').value.trim(),
+    cantidad:parseInt(document.getElementById('indu-cantidad').value)||0,
+    precio:parseFloat(document.getElementById('indu-precio').value)||0,
+    fecha_ingreso:document.getElementById('indu-fecha').value||null,
+  };
+  if(editInduId){
+    await sb.from('indumentaria').update(data).eq('id',editInduId);
+    const i=indumentaria.findIndex(x=>x.id===editInduId);
+    indumentaria[i]={...indumentaria[i],...data};
+  } else {
+    const {data:row}=await sb.from('indumentaria').insert(data).select().single();
+    if(row) indumentaria.push(row);
+  }
+  closeInduModal();renderStock();toast('Producto guardado');
+}
+
+function deleteIndu(id){
+  showConfirm('¿Eliminar este producto?','Esta acción no se puede deshacer.',async()=>{
+    await sb.from('indumentaria').delete().eq('id',id);
+    indumentaria=indumentaria.filter(x=>x.id!==id);
+    renderStock();toast('Producto eliminado');
+  });
+}
+
+// ── NUEVA VENTA ──
+function renderVentaForm(){
+  // Poblar select de productos
+  const sel=document.getElementById('venta-producto');
+  sel.innerHTML='<option value="">— Seleccioná un producto —</option>'+
+    indumentaria.filter(p=>p.cantidad>0).map(p=>
+      `<option value="${p.id}">${p.nombre}${p.talla?' — '+p.talla:''}${p.color?' / '+p.color:''} (stock: ${p.cantidad})</option>`
+    ).join('');
+  document.getElementById('venta-producto-info').style.display='none';
+  document.getElementById('venta-total').textContent='$0.00';
+}
+
+function ventaBuscarAlumno(q){
+  const drop=document.getElementById('venta-alumno-drop');
+  if(!q.trim()){drop.style.display='none';return;}
+  const matches=alumnos.filter(a=>(a.nombre+' '+a.apellido).toLowerCase().includes(q.toLowerCase())).slice(0,6);
+  if(!matches.length){drop.style.display='none';return;}
+  drop.innerHTML=matches.map(a=>`
+    <div style="padding:9px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid #f5f5f5"
+      onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background=''"
+      onmousedown="ventaSelAlumno(${a.id},'${(a.nombre+' '+a.apellido).replace(/'/g,"\\'")}')">
+      ${a.nombre} ${a.apellido} <span style="color:var(--text-muted);font-size:11px">${a.grupo||''}</span>
+    </div>`).join('');
+  drop.style.display='block';
+}
+
+function ventaSelAlumno(id,nombre){
+  ventaAlumnoId=id;
+  document.getElementById('venta-alumno-input').value='';
+  document.getElementById('venta-alumno-drop').style.display='none';
+  document.getElementById('venta-alumno-nombre').textContent=nombre;
+  const sel=document.getElementById('venta-alumno-sel');
+  sel.style.display='flex';
+}
+
+function ventaLimpiarAlumno(){
+  ventaAlumnoId=null;
+  document.getElementById('venta-alumno-input').value='';
+  document.getElementById('venta-alumno-sel').style.display='none';
+}
+
+function ventaSelProducto(){
+  const id=parseInt(document.getElementById('venta-producto').value);
+  const p=indumentaria.find(x=>x.id===id);
+  const info=document.getElementById('venta-producto-info');
+  if(p){
+    info.style.display='block';
+    info.innerHTML=`<strong>${p.nombre}</strong> — Talla: ${p.talla||'—'} · Color: ${p.color||'—'} · Stock disponible: <strong>${p.cantidad}</strong>`;
+    document.getElementById('venta-precio').value=p.precio||0;
+  } else {
+    info.style.display='none';
+  }
+  ventaCalcTotal();
+}
+
+function ventaCalcTotal(){
+  const cant=parseFloat(document.getElementById('venta-cantidad').value)||0;
+  const precio=parseFloat(document.getElementById('venta-precio').value)||0;
+  document.getElementById('venta-total').textContent='$'+(cant*precio).toLocaleString('es-AR',{minimumFractionDigits:2});
+}
+
+async function registrarVenta(){
+  if(!ventaAlumnoId){toast('Seleccioná un alumno','#c0392b');return;}
+  const prodId=parseInt(document.getElementById('venta-producto').value);
+  if(!prodId){toast('Seleccioná un producto','#c0392b');return;}
+  const cant=parseInt(document.getElementById('venta-cantidad').value)||1;
+  const precio=parseFloat(document.getElementById('venta-precio').value)||0;
+  const prod=indumentaria.find(x=>x.id===prodId);
+  if(!prod){return;}
+  if(cant>prod.cantidad){toast(`Stock insuficiente (disponible: ${prod.cantidad})','#c0392b`);return;}
+
+  const venta={
+    alumno_id:ventaAlumnoId,
+    producto_id:prodId,
+    producto_nombre:prod.nombre,
+    talla:prod.talla||'',
+    color:prod.color||'',
+    cantidad:cant,
+    precio_unit:precio,
+    total:cant*precio,
+    pagado:document.getElementById('venta-pagado').value==='true',
+    fecha:new Date().toLocaleDateString('es-AR'),
+  };
+
+  const {data:row}=await sb.from('ventas_indumentaria').insert(venta).select().single();
+  if(row) ventasIndu.push(row);
+
+  // Descontar stock
+  const newCant=prod.cantidad-cant;
+  await sb.from('indumentaria').update({cantidad:newCant}).eq('id',prodId);
+  prod.cantidad=newCant;
+
+  // Limpiar form
+  ventaLimpiarAlumno();
+  document.getElementById('venta-producto').value='';
+  document.getElementById('venta-producto-info').style.display='none';
+  document.getElementById('venta-cantidad').value=1;
+  document.getElementById('venta-precio').value='';
+  document.getElementById('venta-total').textContent='$0.00';
+  document.getElementById('venta-pagado').value='false';
+  ventaAlumnoId=null;
+
+  toast(`✓ Venta registrada — stock actualizado`);
+  renderVentaForm();
+}
+
+// ── HISTORIAL ──
+function renderHistorialVentas(){
+  const q=(document.getElementById('search-ventas').value||'').toLowerCase();
+  const fp=document.getElementById('filter-pagado').value;
+  let f=ventasIndu.filter(v=>{
+    const a=alumnos.find(x=>x.id===v.alumno_id);
+    const nombre=a?`${a.nombre} ${a.apellido}`.toLowerCase():'';
+    if(q && !nombre.includes(q) && !(v.producto_nombre||'').toLowerCase().includes(q)) return false;
+    if(fp!=='' && String(v.pagado)!==fp) return false;
+    return true;
+  });
+  // Ordenar por fecha desc
+  f.sort((a,b)=>(b.id||0)-(a.id||0));
+  document.getElementById('ventas-count').textContent=f.length+' venta'+(f.length!==1?'s':'');
+  const tbody=document.getElementById('ventas-tbody');
+  if(!f.length){tbody.innerHTML='<tr><td colspan="7" class="empty">No hay ventas registradas</td></tr>';return;}
+  tbody.innerHTML=f.map(v=>{
+    const a=alumnos.find(x=>x.id===v.alumno_id);
+    const nombre=a?`${a.nombre} ${a.apellido}`:'—';
+    return`<tr>
+      <td style="font-size:12px">${v.fecha||'—'}</td>
+      <td>${nombre}</td>
+      <td>${v.producto_nombre||'—'}${v.talla?' · '+v.talla:''}${v.color?' / '+v.color:''}</td>
+      <td style="text-align:center">${v.cantidad}</td>
+      <td style="font-weight:600">$${(v.total||0).toLocaleString('es-AR',{minimumFractionDigits:0})}</td>
+      <td><span class="badge ${v.pagado?'badge-activo':'badge-deudor'}">${v.pagado?'✅ Pagado':'❌ Pendiente'}</span></td>
+      <td><div class="row-actions">
+        ${!v.pagado?`<button class="act-btn" onclick="marcarPagado(${v.id})">✓ Pagado</button>`:''}
+        <button class="act-btn del" onclick="eliminarVenta(${v.id})">Eliminar</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+async function marcarPagado(id){
+  await sb.from('ventas_indumentaria').update({pagado:true}).eq('id',id);
+  const v=ventasIndu.find(x=>x.id===id);
+  if(v) v.pagado=true;
+  renderHistorialVentas();renderStock();toast('Venta marcada como pagada');
+}
+
+async function eliminarVenta(id){
+  showConfirm('¿Eliminar esta venta?','El stock NO se repondrá automáticamente.',async()=>{
+    await sb.from('ventas_indumentaria').delete().eq('id',id);
+    ventasIndu=ventasIndu.filter(x=>x.id!==id);
+    renderHistorialVentas();renderStock();toast('Venta eliminada');
+  });
 }
 
 // ══ CONFIGURACIÓN ══
@@ -3430,6 +3814,8 @@ async function initApp(){
   bar(73);
   bar(85);
   const cfg  = await qSingle(()=>sb.from('configuracion').select('*').limit(1).maybeSingle());
+  indumentaria = await q(()=>sb.from('indumentaria').select('*').order('nombre'));
+  ventasIndu   = await q(()=>sb.from('ventas_indumentaria').select('*').order('created_at',{ascending:false}));
   bar(95);
 
   // Historial agrupado por alumno
