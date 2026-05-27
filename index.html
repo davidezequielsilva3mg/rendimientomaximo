@@ -2691,7 +2691,9 @@ function wizardEditarPrearmado(idx){
   document.getElementById('wz-editor-actions').style.display = 'flex';
   document.getElementById('btn-guardar-alumno').style.display = wizardAlumnoId ? 'block' : 'none';
   document.getElementById('plan-editor-content').scrollTop = 0;
-} para que también asigne al alumno si hay uno en el wizard
+}
+
+// Sobreescribir guardarPlan para que también asigne al alumno si hay uno en el wizard
 const _guardarPlanOriginal = guardarPlan;
 
 async function guardarEnAlumno(){
