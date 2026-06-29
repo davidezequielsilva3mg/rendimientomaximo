@@ -1709,7 +1709,7 @@ function renderHistorialVentas(){
   const tbody=document.getElementById('ventas-tbody');
   if(!f.length){tbody.innerHTML='<tr><td colspan="8" class="empty">No hay ventas registradas</td></tr>';return;}
   tbody.innerHTML=f.map(v=>`<tr>
-    <td style="font-size:12px">${v.fecha?v.fecha.split('-').reverse().join('/'):'—'}</td>
+    <td style="font-size:12px">${v.fecha?normalizarFechaISO(v.fecha).split('-').reverse().join('/'):'—'}</td>
     <td>${ventaClienteNombre(v)}</td>
     <td>${v.producto_nombre||'—'}${v.talla?' · '+v.talla:''}${v.color?' / '+v.color:''}</td>
     <td style="text-align:center">${v.cantidad}</td>
@@ -1760,12 +1760,27 @@ function cajaEsteMes(){
   renderCaja();
 }
 
+// Normaliza fecha a formato ISO (AAAA-MM-DD) sin importar si viene como DD/MM/AAAA o ya en ISO
+function normalizarFechaISO(fecha){
+  if(!fecha) return '';
+  if(/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return fecha; // ya es ISO
+  const partes = fecha.split('/'); // DD/MM/AAAA
+  if(partes.length===3){
+    const [d,m,y] = partes;
+    return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+  }
+  return fecha;
+}
+
 function renderCaja(){
   const desde=document.getElementById('caja-desde').value;
   const hasta=document.getElementById('caja-hasta').value;
   if(!desde||!hasta) return;
 
-  const enRango = ventasIndu.filter(v=>v.fecha && v.fecha>=desde && v.fecha<=hasta);
+  const enRango = ventasIndu.filter(v=>{
+    const f = normalizarFechaISO(v.fecha);
+    return f && f>=desde && f<=hasta;
+  });
   const pagadas = enRango.filter(v=>v.pagado);
   const pendientes = enRango.filter(v=>!v.pagado);
 
