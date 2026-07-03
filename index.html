@@ -2178,72 +2178,43 @@ function abrirPersonalizar(asigId){
 
   const planBase = savedPlans.find(p=>p.grupo===asig.grupo&&p.fase===asig.fase&&p.subfase===asig.subfase);
   if(!planBase && !asig.plan_personalizado){
-    toast('Primero guardá el plan base en Planes → '+asig.grupo+' '+asig.fase+' '+asig.subfase,'#c0392b');
+    toast('No se encontró el plan base','#c0392b');
     return;
   }
 
   personalizandoAsigId = asigId;
   const alumno = alumnos.find(a=>a.id===perfilAlumnoId);
 
-  // Cargar en el editor la copia del alumno (o el plan base si no tiene)
-  planDias = JSON.parse(JSON.stringify(asig.plan_personalizado?.dias || planBase.dias));
+  planDias = JSON.parse(JSON.stringify(asig.plan_personalizado?.dias || planBase?.dias || []));
   document.getElementById('sel-grupo').value   = asig.grupo||'';
   document.getElementById('sel-fase').value    = asig.fase||'';
   document.getElementById('sel-subfase').value = asig.subfase||'';
+  document.getElementById('sel-nombre-libre').value = asig.obs||'';
   document.getElementById('meta-objetivo').value = planBase?.objetivo||'';
   document.getElementById('meta-plan').value   = planBase?.plan_num||'';
   document.getElementById('meta-nombre').value = alumno?`${alumno.nombre} ${alumno.apellido}`:'';
 
-  // Ir a la pestaña de planes, editor
   switchTab('asignar', document.querySelector('.nav-item:nth-child(5)'));
-  // Abrir editor en wizard
-  wizardAlumnoId = null;
-  document.getElementById('wz-alumno-info').style.display = 'none';
+  wizardAlumnoId = perfilAlumnoId; // mantener el alumno para guardar en historial
+  document.getElementById('wz-alumno-nombre').textContent = alumno?`${alumno.nombre} ${alumno.apellido}`:'';
+  document.getElementById('wz-alumno-info').style.display = 'flex';
   document.getElementById('wz-step1-badge').className = 'wz-step-badge done';
   document.getElementById('wz-step2-badge').className = 'wz-step-badge done';
   document.getElementById('wz-step3-badge').className = 'wz-step-badge active';
   wizardShowPaso('wz-paso3-editor');
   document.getElementById('wz-editor-actions').style.display = 'flex';
+  // Mostrar botón guardar en alumno (crea nuevo en historial)
+  const btnAlumno = document.getElementById('btn-guardar-alumno');
+  btnAlumno.style.display = 'block';
+  btnAlumno.textContent = '📋 Guardar como nuevo plan en historial';
   renderDias();
   updateAssignBadge();
   document.getElementById('plan-editor-content').scrollTop=0;
-
-  // Cambiar el botón guardar temporalmente
-  const btnGuardar = document.querySelector('.btn-green[onclick="guardarPlan()"]');
-  if(btnGuardar){
-    btnGuardar.textContent = '💾 Guardar personalización';
-    btnGuardar.onclick = () => guardarPersonalizacion();
-  }
-
-  toast(`Editando plan personalizado de ${alumno?.nombre||'alumno'} — guardá cuando termines`);
+  toast(`Modificá el plan de ${alumno?.nombre||'alumno'} y guardalo como nuevo en el historial`);
 }
 
 async function guardarPersonalizacion(){
-  if(!personalizandoAsigId) return;
-  const lista = historialPlanes[perfilAlumnoId]||[];
-  const asig = lista.find(p=>p.id==personalizandoAsigId);
-  if(!asig) return;
-
-  // Guardar la copia personalizada en la asignación
-  const planPersonalizado = { dias: JSON.parse(JSON.stringify(planDias)) };
-  await sb.from('historial_planes').update({ plan_personalizado: planPersonalizado }).eq('id',personalizandoAsigId);
-  asig.plan_personalizado = planPersonalizado;
-
-  // Restaurar botón guardar
-  const btnGuardar = document.querySelector('.btn-green');
-  if(btnGuardar){
-    btnGuardar.textContent = 'Guardar plan';
-    btnGuardar.onclick = () => guardarPlan();
-  }
-
-  personalizandoAsigId = null;
-  toast('Plan personalizado guardado ✓');
-
-  // Volver al perfil del alumno
-  setTimeout(()=>{
-    switchTab('alumnos', document.querySelector('.nav-item:nth-child(1)'));
-    abrirPerfil(perfilAlumnoId);
-  }, 800);
+  // Ya no se usa directamente — ahora se usa guardarEnAlumno desde el botón
 }
 
 function deleteAsignacion(asigId){
@@ -2969,7 +2940,6 @@ async function guardarEnAlumno(){
   const s = document.getElementById('sel-subfase').value;
   const nl = document.getElementById('sel-nombre-libre').value.trim();
 
-  // Guardar en historial_planes como plan personalizado
   const asig = {
     alumno_id: wizardAlumnoId,
     fecha: new Date().toISOString().split('T')[0],
@@ -2987,12 +2957,26 @@ async function guardarEnAlumno(){
     historialPlanes[wizardAlumnoId].unshift(row);
   }
 
-  toast(`✓ Plan guardado en el perfil de ${alumno.nombre} ${alumno.apellido}`);
-
-  // Imprimir automáticamente
+  toast(`✓ Nuevo plan guardado en el historial de ${alumno.nombre} ${alumno.apellido}`);
   imprimirPlan();
 
+  // Guardar si venía desde perfil para volver después
+  const volverAlPerfil = !!perfilAlumnoId;
+  const alumnoId = wizardAlumnoId;
+  personalizandoAsigId = null;
+
+  // Restaurar texto del botón
+  document.getElementById('btn-guardar-alumno').textContent = '✓ Guardar en alumno';
+
   wizardReset();
+
+  // Volver al perfil del alumno si venía desde ahí
+  if(volverAlPerfil){
+    setTimeout(()=>{
+      switchTab('alumnos', document.querySelector('.nav-item:nth-child(1)'));
+      abrirPerfil(alumnoId);
+    }, 1000);
+  }
 }
 
 // ══ PLANES — EDITOR ══
@@ -3982,7 +3966,7 @@ function imprimirPlan() {
       </tr><tr>`;
       [0,1,2,3].forEach(si=>{
         const s=SEMANAS[si]; const vals=eje.reps[s]||[];
-        for(let i=0;i<N;i++) rows+=`<td style="text-align:center;font-size:7pt;font-weight:600;height:13px;border:0.3px solid #bbb;${i===0&&si>0?'border-left:'+BORDER_SEM+';':''}padding:0">${vals[i]||''}</td>`;
+        for(let i=0;i<N;i++) rows+=`<td style="text-align:center;font-size:9pt;font-weight:700;height:15px;border:0.3px solid #bbb;${i===0&&si>0?'border-left:'+BORDER_SEM+';':''}padding:0">${vals[i]||''}</td>`;
       });
       rows += `</tr><tr>`;
       [0,1,2,3].forEach(si=>{
