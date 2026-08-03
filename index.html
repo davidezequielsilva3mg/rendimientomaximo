@@ -385,6 +385,33 @@ tr:hover td { background: #faf9f7; }
 </style>
 </head>
 <body>
+<!-- ══ LOGIN ══ -->
+<div id="login-screen" style="position:fixed;inset:0;z-index:9999;background:#111;display:flex;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:16px;padding:40px 36px;width:340px;box-shadow:0 20px 60px rgba(0,0,0,.4)">
+    <div style="text-align:center;margin-bottom:28px">
+      <div id="login-logo" style="margin-bottom:12px"></div>
+      <div style="font-size:18px;font-weight:600;color:#111">GymManager</div>
+      <div style="font-size:12px;color:#888;margin-top:4px">Rendimiento Máximo</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <label style="font-size:11px;font-weight:600;color:#666;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px">Usuario</label>
+        <input id="login-usuario" class="form-input" type="text" placeholder="Ingresá tu usuario" autocomplete="username"
+          onkeydown="if(event.key==='Enter') document.getElementById('login-password').focus()" />
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:#666;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px">Contraseña</label>
+        <input id="login-password" class="form-input" type="password" placeholder="••••••••" autocomplete="current-password"
+          onkeydown="if(event.key==='Enter') doLogin()" />
+      </div>
+      <div id="login-error" style="display:none;color:#c0392b;font-size:12px;text-align:center;padding:6px;background:#fce8e8;border-radius:6px">
+        Usuario o contraseña incorrectos
+      </div>
+      <button class="btn btn-dark" style="width:100%;padding:12px;font-size:14px;margin-top:4px" onclick="doLogin()">Ingresar</button>
+    </div>
+  </div>
+</div>
+
 <div class="layout">
 
   <!-- SIDEBAR -->
@@ -402,6 +429,7 @@ tr:hover td { background: #faf9f7; }
       <div class="nav-item" onclick="switchTab('insumos',this)"><span class="nav-icon">📦</span> Insumos</div>
       <div class="nav-item" onclick="switchTab('ventas',this)"><span class="nav-icon">💰</span> Ventas</div>
       <div class="nav-item" onclick="switchTab('config',this)"><span class="nav-icon">⚙️</span> Configuración</div>
+      <div class="nav-item" onclick="cerrarSesion()" style="margin-top:auto;color:#c0392b;border-top:1px solid var(--card-border)"><span class="nav-icon">🚪</span> Cerrar sesión</div>
     </nav>
     <div class="sidebar-footer">v1.0 · en desarrollo</div>
   </div>
@@ -964,6 +992,26 @@ tr:hover td { background: #faf9f7; }
           </div>
         </div>
 
+        <!-- Cambiar contraseña -->
+        <div class="config-section" style="margin-top:0">
+          <div class="config-section-title">Cambiar contraseña</div>
+          <div style="display:flex;flex-direction:column;gap:14px;max-width:400px">
+            <div class="form-group">
+              <label class="form-label">Contraseña actual</label>
+              <input class="form-input" id="cfg-pass-actual" type="password" placeholder="••••••••" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Nueva contraseña</label>
+              <input class="form-input" id="cfg-pass-nueva" type="password" placeholder="••••••••" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Repetir nueva contraseña</label>
+              <input class="form-input" id="cfg-pass-repetir" type="password" placeholder="••••••••" />
+            </div>
+            <button class="btn btn-dark" style="align-self:flex-start;padding:8px 20px" onclick="cambiarPassword()">Cambiar contraseña</button>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -1390,6 +1438,49 @@ function renderBibliotecaTab(){
     </tr>`;}).join('')}
     </tbody>
   </table>`;
+}
+
+// ══ LOGIN ══
+let usuarioActual = null;
+
+async function doLogin(){
+  const usuario = document.getElementById('login-usuario').value.trim();
+  const password = document.getElementById('login-password').value;
+  document.getElementById('login-error').style.display = 'none';
+
+  if(!usuario || !password){
+    document.getElementById('login-error').style.display = 'block';
+    document.getElementById('login-error').textContent = 'Completá usuario y contraseña';
+    return;
+  }
+
+  const {data, error} = await sb.from('usuarios').select('*').eq('usuario', usuario).eq('password', password).single();
+
+  if(error || !data){
+    document.getElementById('login-error').style.display = 'block';
+    document.getElementById('login-error').textContent = 'Usuario o contraseña incorrectos';
+    document.getElementById('login-password').value = '';
+    return;
+  }
+
+  usuarioActual = data;
+  document.getElementById('login-screen').style.display = 'none';
+
+  // Mostrar nombre en sidebar
+  const sidebarSub = document.querySelector('.sidebar-logo-sub');
+  if(sidebarSub) sidebarSub.textContent = `👤 ${data.nombre||data.usuario}`;
+
+  await initApp();
+}
+
+function cerrarSesion(){
+  showConfirm('¿Cerrar sesión?','', ()=>{
+    usuarioActual = null;
+    document.getElementById('login-usuario').value = '';
+    document.getElementById('login-password').value = '';
+    document.getElementById('login-error').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'flex';
+  });
 }
 
 // ══ INSUMOS Y VENTAS ══
@@ -1908,6 +1999,27 @@ function renderCaja(){
     <td style="text-align:center">${d.count}</td>
     <td style="font-weight:600">$${d.total.toLocaleString('es-AR',{minimumFractionDigits:0})}</td>
   </tr>`).join('');
+}
+
+async function cambiarPassword(){
+  if(!usuarioActual){ toast('No hay sesión activa','#c0392b'); return; }
+  const actual = document.getElementById('cfg-pass-actual').value;
+  const nueva = document.getElementById('cfg-pass-nueva').value;
+  const repetir = document.getElementById('cfg-pass-repetir').value;
+
+  if(!actual || !nueva || !repetir){ toast('Completá todos los campos','#c0392b'); return; }
+  if(actual !== usuarioActual.password){ toast('La contraseña actual es incorrecta','#c0392b'); return; }
+  if(nueva !== repetir){ toast('Las contraseñas nuevas no coinciden','#c0392b'); return; }
+  if(nueva.length < 6){ toast('La nueva contraseña debe tener al menos 6 caracteres','#c0392b'); return; }
+
+  await sb.from('usuarios').update({password: nueva}).eq('id', usuarioActual.id);
+  usuarioActual.password = nueva;
+
+  document.getElementById('cfg-pass-actual').value = '';
+  document.getElementById('cfg-pass-nueva').value = '';
+  document.getElementById('cfg-pass-repetir').value = '';
+
+  toast('✓ Contraseña actualizada correctamente');
 }
 
 // ══ CONFIGURACIÓN ══
@@ -4204,7 +4316,7 @@ async function initApp(){
   }, 300);
 }
 
-initApp();
+// La app arranca desde doLogin() después de verificar credenciales
 </script>
 </body>
 </html>
