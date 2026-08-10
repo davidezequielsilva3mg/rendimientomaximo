@@ -428,6 +428,7 @@ tr:hover td { background: #faf9f7; }
       <div class="nav-item" onclick="switchTab('asignar',this)"><span class="nav-icon">📋</span> Asignar plan</div>
       <div class="nav-item" onclick="switchTab('insumos',this)"><span class="nav-icon">📦</span> Insumos</div>
       <div class="nav-item" onclick="switchTab('ventas',this)"><span class="nav-icon">💰</span> Ventas</div>
+      <div class="nav-item" onclick="switchTab('entradas',this)"><span class="nav-icon">🎟️</span> Entradas</div>
       <div class="nav-item" onclick="switchTab('config',this)"><span class="nav-icon">⚙️</span> Configuración</div>
       <div class="nav-item" onclick="cerrarSesion()" style="margin-top:auto;color:#c0392b;border-top:1px solid var(--card-border)"><span class="nav-icon">🚪</span> Cerrar sesión</div>
     </nav>
@@ -939,6 +940,150 @@ tr:hover td { background: #faf9f7; }
       </div>
     </div>
 
+    <!-- ══ TAB ENTRADAS ══ -->
+    <div id="tab-entradas" class="tab-content" style="min-height:0">
+      <div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+        <div class="planes-subtabs" style="flex-shrink:0">
+          <button class="planes-subtab active" id="pstab-ent-evento" onclick="switchEntTab('evento',this)">⚙️ Evento</button>
+          <button class="planes-subtab" id="pstab-ent-venta" onclick="switchEntTab('venta',this)">🛒 Vender entrada</button>
+          <button class="planes-subtab" id="pstab-ent-lista" onclick="switchEntTab('lista',this)">📋 Lista de entradas</button>
+        </div>
+
+        <!-- EVENTO: configuración -->
+        <div id="ent-evento" style="display:flex;flex-direction:column;overflow-y:auto;padding:24px 28px;gap:20px">
+          <div style="max-width:540px">
+            <div style="font-size:17px;font-weight:500;margin-bottom:4px">Configuración del evento</div>
+            <div style="font-size:13px;color:var(--text-muted);margin-bottom:22px">Definí los precios y el nombre del evento</div>
+            <div style="display:flex;flex-direction:column;gap:14px">
+              <div class="form-group">
+                <label class="form-label">Nombre del evento *</label>
+                <input class="form-input" id="ent-nombre" type="text" placeholder="Ej: Fiesta Fin de Año 2025" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Descripción</label>
+                <textarea class="form-input" id="ent-descripcion" rows="2" placeholder="Fecha, lugar, detalle..."></textarea>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+                <div class="form-group">
+                  <label class="form-label">💛 Precio Agosto / Octubre</label>
+                  <input class="form-input" id="ent-precio-temprano" type="number" step="0.01" placeholder="0.00" />
+                  <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Precio "anticipado"</div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">🔴 Precio Noviembre</label>
+                  <input class="form-input" id="ent-precio-tarde" type="number" step="0.01" placeholder="0.00" />
+                  <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Precio con recargo</div>
+                </div>
+              </div>
+              <button class="btn btn-dark" style="align-self:flex-start;padding:9px 24px" onclick="guardarEvento()">Guardar evento</button>
+            </div>
+
+            <!-- Eventos guardados -->
+            <div style="margin-top:28px">
+              <div style="font-size:13px;font-weight:600;margin-bottom:12px;color:var(--text-secondary)">Eventos guardados</div>
+              <div id="ent-eventos-list"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- VENTA: nueva entrada -->
+        <div id="ent-venta" style="display:none;flex-direction:column;overflow-y:auto;padding:24px 28px">
+          <div style="max-width:520px;margin:0 auto;width:100%">
+            <div style="font-size:17px;font-weight:500;margin-bottom:20px">Vender entrada</div>
+            <div style="display:flex;flex-direction:column;gap:16px">
+
+              <div class="form-group">
+                <label class="form-label">Evento *</label>
+                <select class="form-input" id="ent-sel-evento" onchange="entSelEvento()">
+                  <option value="">— Seleccioná un evento —</option>
+                </select>
+              </div>
+              <div id="ent-precios-info" style="display:none;padding:10px 14px;background:#f9f9f9;border-radius:8px;font-size:13px"></div>
+
+              <div class="form-group">
+                <label class="form-label">Alumno *</label>
+                <div style="position:relative">
+                  <input class="form-input" id="ent-alumno-input" type="text" placeholder="Buscar alumno..." oninput="entBuscarAlumno(this.value)" autocomplete="off" />
+                  <div id="ent-alumno-drop" style="display:none;position:absolute;left:0;right:0;top:100%;background:#fff;border:1px solid var(--card-border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.1);z-index:200;max-height:220px;overflow-y:auto"></div>
+                </div>
+                <div id="ent-alumno-sel" style="display:none;margin-top:8px;padding:8px 12px;background:#f0f9f0;border-radius:6px;font-size:13px;align-items:center;justify-content:space-between">
+                  <span id="ent-alumno-nombre"></span>
+                  <button onclick="entLimpiarAlumno()" style="background:none;border:none;cursor:pointer;color:#999;font-size:16px">×</button>
+                </div>
+              </div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+                <div class="form-group">
+                  <label class="form-label">N° de entrada</label>
+                  <input class="form-input" id="ent-numero" type="text" placeholder="Auto: 001" />
+                  <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Se asigna automáticamente</div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Período de pago</label>
+                  <select class="form-input" id="ent-periodo" onchange="entCalcPrecio()">
+                    <option value="temprano">💛 Agosto / Octubre</option>
+                    <option value="tarde">🔴 Noviembre</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style="padding:12px 16px;background:#f5f5f5;border-radius:8px;display:flex;justify-content:space-between;align-items:center">
+                <span style="font-size:13px;color:var(--text-secondary)">Precio total</span>
+                <span style="font-size:16px;font-weight:700" id="ent-precio-display">$0</span>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Monto a pagar ahora *</label>
+                <input class="form-input" id="ent-monto-pago" type="number" step="0.01" placeholder="0.00" oninput="entCalcResto()" />
+              </div>
+              <div id="ent-resto-info" style="display:none;padding:10px 14px;border-radius:8px;font-size:13px"></div>
+
+              <div class="form-group">
+                <label class="form-label">Nota del pago</label>
+                <input class="form-input" id="ent-nota-pago" type="text" placeholder="Ej: Seña, cuota 1..." />
+              </div>
+
+              <button class="btn btn-dark" style="width:100%;padding:12px;font-size:14px" onclick="registrarEntrada()">Registrar entrada</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- LISTA DE ENTRADAS -->
+        <div id="ent-lista" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+          <div style="padding:12px 28px;border-bottom:1px solid var(--card-border);display:flex;align-items:center;gap:12px;flex-shrink:0;flex-wrap:wrap">
+            <select class="filter-select" id="ent-filter-evento" onchange="renderListaEntradas()">
+              <option value="">Todos los eventos</option>
+            </select>
+            <input class="search-input" style="margin:0;max-width:240px" type="text" id="ent-search" placeholder="Buscar por nombre..." oninput="renderListaEntradas()" />
+            <select class="filter-select" id="ent-filter-estado" onchange="renderListaEntradas()">
+              <option value="">Todos</option>
+              <option value="pagado">Pagado completo</option>
+              <option value="parcial">Pago parcial</option>
+              <option value="sin-pago">Sin pago</option>
+            </select>
+            <div style="font-size:12px;color:var(--text-muted)" id="ent-lista-count"></div>
+            <button class="btn btn-ghost" style="margin-left:auto" onclick="imprimirListaEntradasEvento()">🖨️ Imprimir lista</button>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:0 28px 18px">
+            <div class="table-wrap"><table>
+              <thead><tr>
+                <th>N°</th>
+                <th>Alumno</th>
+                <th>Teléfono</th>
+                <th>Precio total</th>
+                <th>Pagado</th>
+                <th>Saldo</th>
+                <th>% Pago</th>
+                <th>Acciones</th>
+              </tr></thead>
+              <tbody id="ent-lista-tbody"></tbody>
+            </table></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
     <div id="tab-config" class="tab-content" style="min-height:0">
       <div class="topbar">
         <div><div class="page-title">Configuración</div><div class="page-sub">Datos del gimnasio</div></div>
@@ -1334,6 +1479,7 @@ function switchTab(tab,el){
   if(tab==='alumnos' && perfilAlumnoId){ volverListadoAlumnos(); }
   if(tab==='config'){ cargarFormConfig(); }
   if(tab==='ejercicios'){ renderEjerciciosTab(); }
+  if(tab==='entradas'){ switchEntTab('evento', document.getElementById('pstab-ent-evento')); }
   if(tab==='insumos'){ renderStock(); }
   if(tab==='ventas'){ switchVentaTab('nueva', document.getElementById('pstab-venta-nueva')); }
 }
@@ -2020,6 +2166,402 @@ async function cambiarPassword(){
   document.getElementById('cfg-pass-repetir').value = '';
 
   toast('✓ Contraseña actualizada correctamente');
+}
+
+// ══ ENTRADAS EVENTO ══
+let eventosEntrada = [];
+let ventasEntradas = [];
+let entAlumnoId = null;
+let entEventoActual = null;
+
+function switchEntTab(tab, el){
+  ['evento','venta','lista'].forEach(t=>{
+    const d = document.getElementById('ent-'+t);
+    if(d) d.style.display = t===tab ? 'flex' : 'none';
+  });
+  document.querySelectorAll('[id^="pstab-ent-"]').forEach(b=>b.classList.remove('active'));
+  if(el) el.classList.add('active');
+  if(tab==='evento') renderEventosList();
+  if(tab==='venta') renderVentaEntradaForm();
+  if(tab==='lista') renderListaEntradas();
+}
+
+// ── EVENTO ──
+function renderEventosList(){
+  const cont = document.getElementById('ent-eventos-list');
+  if(!eventosEntrada.length){
+    cont.innerHTML='<div style="color:var(--text-muted);font-size:13px">No hay eventos creados aún.</div>';
+    return;
+  }
+  cont.innerHTML = eventosEntrada.map(e=>`
+    <div style="border:1px solid var(--card-border);border-radius:10px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-weight:600;font-size:14px">${e.nombre}</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:3px">${e.descripcion||''}</div>
+        <div style="font-size:12px;margin-top:4px">
+          <span style="background:#fff3cd;padding:2px 8px;border-radius:4px;margin-right:6px">💛 $${(e.precio_temprano||0).toLocaleString('es-AR',{minimumFractionDigits:0})}</span>
+          <span style="background:#fce8e8;padding:2px 8px;border-radius:4px">🔴 $${(e.precio_tarde||0).toLocaleString('es-AR',{minimumFractionDigits:0})}</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="act-btn" onclick="editarEvento(${e.id})">Editar</button>
+        <button class="act-btn del" onclick="eliminarEvento(${e.id})">Eliminar</button>
+      </div>
+    </div>`).join('');
+}
+
+async function guardarEvento(){
+  const nombre = document.getElementById('ent-nombre').value.trim();
+  if(!nombre){ toast('El nombre del evento es obligatorio','#c0392b'); return; }
+  const data = {
+    nombre,
+    descripcion: document.getElementById('ent-descripcion').value.trim(),
+    precio_temprano: parseFloat(document.getElementById('ent-precio-temprano').value)||0,
+    precio_tarde: parseFloat(document.getElementById('ent-precio-tarde').value)||0,
+  };
+  if(entEventoActual){
+    await sb.from('eventos_entrada').update(data).eq('id',entEventoActual);
+    const i = eventosEntrada.findIndex(e=>e.id===entEventoActual);
+    eventosEntrada[i] = {...eventosEntrada[i],...data};
+    entEventoActual = null;
+  } else {
+    const {data:row} = await sb.from('eventos_entrada').insert(data).select().single();
+    if(row) eventosEntrada.push(row);
+  }
+  document.getElementById('ent-nombre').value='';
+  document.getElementById('ent-descripcion').value='';
+  document.getElementById('ent-precio-temprano').value='';
+  document.getElementById('ent-precio-tarde').value='';
+  renderEventosList();
+  toast('Evento guardado ✓');
+}
+
+function editarEvento(id){
+  const e = eventosEntrada.find(x=>x.id===id);
+  if(!e) return;
+  entEventoActual = id;
+  document.getElementById('ent-nombre').value = e.nombre||'';
+  document.getElementById('ent-descripcion').value = e.descripcion||'';
+  document.getElementById('ent-precio-temprano').value = e.precio_temprano||'';
+  document.getElementById('ent-precio-tarde').value = e.precio_tarde||'';
+  document.querySelector('#ent-evento').scrollTop = 0;
+}
+
+function eliminarEvento(id){
+  showConfirm('¿Eliminar este evento?','Se eliminarán también todas las entradas vendidas asociadas.',async()=>{
+    await sb.from('eventos_entrada').delete().eq('id',id);
+    eventosEntrada = eventosEntrada.filter(e=>e.id!==id);
+    ventasEntradas = ventasEntradas.filter(v=>v.evento_id!==id);
+    renderEventosList();
+    toast('Evento eliminado');
+  });
+}
+
+// ── VENTA ENTRADA ──
+function renderVentaEntradaForm(){
+  const sel = document.getElementById('ent-sel-evento');
+  sel.innerHTML = '<option value="">— Seleccioná un evento —</option>' +
+    eventosEntrada.map(e=>`<option value="${e.id}">${e.nombre}</option>`).join('');
+  document.getElementById('ent-precios-info').style.display='none';
+  document.getElementById('ent-precio-display').textContent='$0';
+  document.getElementById('ent-resto-info').style.display='none';
+  entLimpiarAlumno();
+  document.getElementById('ent-monto-pago').value='';
+  document.getElementById('ent-nota-pago').value='';
+  // Auto número siguiente
+  entActualizarNumero();
+}
+
+function entSelEvento(){
+  const id = parseInt(document.getElementById('ent-sel-evento').value);
+  const ev = eventosEntrada.find(e=>e.id===id);
+  const info = document.getElementById('ent-precios-info');
+  if(ev){
+    info.style.display='block';
+    info.innerHTML=`<strong>${ev.nombre}</strong>${ev.descripcion?' — '+ev.descripcion:''}<br>
+      <span style="background:#fff3cd;padding:1px 6px;border-radius:4px;margin-right:6px;font-size:12px">💛 Ago/Oct: $${(ev.precio_temprano||0).toLocaleString('es-AR',{minimumFractionDigits:0})}</span>
+      <span style="background:#fce8e8;padding:1px 6px;border-radius:4px;font-size:12px">🔴 Nov: $${(ev.precio_tarde||0).toLocaleString('es-AR',{minimumFractionDigits:0})}</span>`;
+  } else {
+    info.style.display='none';
+  }
+  entActualizarNumero();
+  entCalcPrecio();
+}
+
+function entActualizarNumero(){
+  const id = parseInt(document.getElementById('ent-sel-evento').value);
+  if(!id){ document.getElementById('ent-numero').value=''; return; }
+  const ventas = ventasEntradas.filter(v=>v.evento_id===id);
+  const maxNum = ventas.reduce((max,v)=>{ const n=parseInt(v.numero_entrada)||0; return n>max?n:max; }, 0);
+  document.getElementById('ent-numero').value = String(maxNum+1).padStart(3,'0');
+}
+
+function entCalcPrecio(){
+  const id = parseInt(document.getElementById('ent-sel-evento').value);
+  const ev = eventosEntrada.find(e=>e.id===id);
+  if(!ev){ document.getElementById('ent-precio-display').textContent='$0'; return; }
+  const periodo = document.getElementById('ent-periodo').value;
+  const precio = periodo==='temprano' ? ev.precio_temprano : ev.precio_tarde;
+  document.getElementById('ent-precio-display').textContent='$'+(precio||0).toLocaleString('es-AR',{minimumFractionDigits:0});
+  entCalcResto();
+}
+
+function entCalcResto(){
+  const id = parseInt(document.getElementById('ent-sel-evento').value);
+  const ev = eventosEntrada.find(e=>e.id===id);
+  if(!ev) return;
+  const periodo = document.getElementById('ent-periodo').value;
+  const precioTotal = periodo==='temprano' ? ev.precio_temprano : ev.precio_tarde;
+  const pagado = parseFloat(document.getElementById('ent-monto-pago').value)||0;
+  const resto = document.getElementById('ent-resto-info');
+  if(pagado > 0 && pagado < precioTotal){
+    // Si paga parcial en período temprano, el resto se calcula a precio noviembre
+    const restoPrecio = periodo==='temprano' ? (ev.precio_tarde - pagado) : (precioTotal - pagado);
+    resto.style.display='block';
+    resto.style.background = restoPrecio > 0 ? '#fce8e8' : '#e8f4e8';
+    resto.style.color = restoPrecio > 0 ? '#c0392b' : '#2d6a2d';
+    if(restoPrecio > 0){
+      resto.innerHTML = `Saldo pendiente: <strong>$${restoPrecio.toLocaleString('es-AR',{minimumFractionDigits:0})}</strong>${periodo==='temprano'?' (se aplicará precio Noviembre al resto)':''}`;
+    } else {
+      resto.innerHTML = '✅ Pago completo';
+    }
+  } else if(pagado >= precioTotal){
+    resto.style.display='block';
+    resto.style.background='#e8f4e8';
+    resto.style.color='#2d6a2d';
+    resto.innerHTML='✅ Pago completo';
+  } else {
+    resto.style.display='none';
+  }
+}
+
+function entBuscarAlumno(q){
+  const drop = document.getElementById('ent-alumno-drop');
+  if(!q.trim()){ drop.style.display='none'; return; }
+  const matches = alumnos.filter(a=>(a.nombre+' '+a.apellido).toLowerCase().includes(q.toLowerCase())).slice(0,6);
+  if(!matches.length){ drop.style.display='none'; return; }
+  drop.innerHTML = matches.map(a=>`
+    <div style="padding:9px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid #f5f5f5"
+      onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background=''"
+      onmousedown="entSelAlumno(${a.id},'${(a.nombre+' '+a.apellido).replace(/'/g,"\\'")}')">
+      ${a.nombre} ${a.apellido}
+      <span style="color:var(--text-muted);font-size:11px"> · ${a.telefono||'sin tel.'}</span>
+    </div>`).join('');
+  drop.style.display='block';
+}
+
+function entSelAlumno(id, nombre){
+  entAlumnoId = id;
+  document.getElementById('ent-alumno-input').value='';
+  document.getElementById('ent-alumno-drop').style.display='none';
+  document.getElementById('ent-alumno-nombre').textContent=nombre;
+  const sel = document.getElementById('ent-alumno-sel');
+  sel.style.display='flex';
+}
+
+function entLimpiarAlumno(){
+  entAlumnoId=null;
+  document.getElementById('ent-alumno-input').value='';
+  document.getElementById('ent-alumno-sel').style.display='none';
+}
+
+async function registrarEntrada(){
+  const eventoId = parseInt(document.getElementById('ent-sel-evento').value);
+  if(!eventoId){ toast('Seleccioná un evento','#c0392b'); return; }
+  if(!entAlumnoId){ toast('Seleccioná un alumno','#c0392b'); return; }
+  const ev = eventosEntrada.find(e=>e.id===eventoId);
+  if(!ev) return;
+  const periodo = document.getElementById('ent-periodo').value;
+  const precioTotal = periodo==='temprano' ? ev.precio_temprano : ev.precio_tarde;
+  const montoAhora = parseFloat(document.getElementById('ent-monto-pago').value)||0;
+  if(!montoAhora){ toast('Ingresá el monto a pagar ahora','#c0392b'); return; }
+  const numero = document.getElementById('ent-numero').value.trim() || String(ventasEntradas.filter(v=>v.evento_id===eventoId).length+1).padStart(3,'0');
+  const nota = document.getElementById('ent-nota-pago').value.trim();
+
+  // Calcular precio_total: si paga parcial en temprano, el total es precio_tarde
+  const precioFinal = (montoAhora < precioTotal && periodo==='temprano') ? ev.precio_tarde : precioTotal;
+
+  const venta = {
+    evento_id: eventoId,
+    numero_entrada: numero,
+    alumno_id: entAlumnoId,
+    precio_total: precioFinal,
+    total_pagado: montoAhora,
+    pagos: [{fecha: new Date().toLocaleDateString('es-AR'), monto: montoAhora, nota: nota||periodo==='temprano'?'Ago/Oct':'Nov', periodo}]
+  };
+
+  const {data:row} = await sb.from('ventas_entradas').insert(venta).select().single();
+  if(row) ventasEntradas.push(row);
+
+  toast(`✓ Entrada N° ${numero} registrada`);
+  renderVentaEntradaForm();
+  entActualizarNumero();
+}
+
+// ── LISTA ENTRADAS ──
+function renderListaEntradas(){
+  // Poblar select de eventos
+  const selEvento = document.getElementById('ent-filter-evento');
+  const valEvento = selEvento.value;
+  selEvento.innerHTML = '<option value="">Todos los eventos</option>' +
+    eventosEntrada.map(e=>`<option value="${e.id}" ${e.id==valEvento?'selected':''}>${e.nombre}</option>`).join('');
+
+  const eventoFiltro = parseInt(selEvento.value)||0;
+  const q = (document.getElementById('ent-search').value||'').toLowerCase();
+  const estado = document.getElementById('ent-filter-estado').value;
+
+  let f = ventasEntradas.filter(v=>{
+    if(eventoFiltro && v.evento_id!==eventoFiltro) return false;
+    const a = alumnos.find(x=>x.id===v.alumno_id);
+    const nombre = a?`${a.nombre} ${a.apellido}`.toLowerCase():'';
+    if(q && !nombre.includes(q) && !v.numero_entrada?.includes(q)) return false;
+    const pct = v.precio_total>0 ? (v.total_pagado/v.precio_total)*100 : 0;
+    if(estado==='pagado' && pct<100) return false;
+    if(estado==='parcial' && (pct===0||pct>=100)) return false;
+    if(estado==='sin-pago' && pct>0) return false;
+    return true;
+  });
+
+  f.sort((a,b)=>parseInt(a.numero_entrada)-parseInt(b.numero_entrada));
+  document.getElementById('ent-lista-count').textContent = f.length+' entrada'+(f.length!==1?'s':'');
+
+  const tbody = document.getElementById('ent-lista-tbody');
+  if(!f.length){ tbody.innerHTML='<tr><td colspan="8" class="empty">No hay entradas registradas</td></tr>'; return; }
+
+  tbody.innerHTML = f.map(v=>{
+    const a = alumnos.find(x=>x.id===v.alumno_id);
+    const nombre = a?`${a.nombre} ${a.apellido}`:'—';
+    const tel = a?.telefono||'—';
+    const saldo = Math.max(0, v.precio_total - v.total_pagado);
+    const pct = v.precio_total>0 ? Math.round((v.total_pagado/v.precio_total)*100) : 0;
+    const pctColor = pct>=100?'#2d6a2d':pct>=50?'#e67e22':'#c0392b';
+    const ev = eventosEntrada.find(e=>e.id===v.evento_id);
+    return `<tr>
+      <td><span style="background:#111;color:#fff;padding:2px 8px;border-radius:4px;font-weight:700;font-size:12px">#${v.numero_entrada}</span></td>
+      <td>${nombre}</td>
+      <td style="font-size:12px">${tel}</td>
+      <td>$${(v.precio_total||0).toLocaleString('es-AR',{minimumFractionDigits:0})}</td>
+      <td style="color:#2d6a2d;font-weight:600">$${(v.total_pagado||0).toLocaleString('es-AR',{minimumFractionDigits:0})}</td>
+      <td style="color:${saldo>0?'#c0392b':'#2d6a2d'};font-weight:600">${saldo>0?'$'+saldo.toLocaleString('es-AR',{minimumFractionDigits:0}):'✅'}</td>
+      <td><div style="display:flex;align-items:center;gap:6px">
+        <div style="background:#eee;border-radius:4px;height:8px;width:60px;overflow:hidden">
+          <div style="height:100%;background:${pctColor};width:${pct}%"></div>
+        </div>
+        <span style="font-size:11px;color:${pctColor};font-weight:600">${pct}%</span>
+      </div></td>
+      <td><div class="row-actions">
+        ${saldo>0?`<button class="act-btn" onclick="abrirPagoExtra(${v.id})">+ Pago</button>`:''}
+        <button class="act-btn del" onclick="eliminarVentaEntrada(${v.id})">Eliminar</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── PAGO ADICIONAL ──
+function abrirPagoExtra(ventaId){
+  const v = ventasEntradas.find(x=>x.id===ventaId);
+  if(!v) return;
+  const a = alumnos.find(x=>x.id===v.alumno_id);
+  const saldo = Math.max(0, v.precio_total - v.total_pagado);
+  const monto = prompt(`Pago adicional para ${a?.nombre||''} ${a?.apellido||''}\nSaldo pendiente: $${saldo.toLocaleString('es-AR',{minimumFractionDigits:0})}\n\nIngresá el monto:`);
+  if(!monto) return;
+  const montoNum = parseFloat(monto);
+  if(!montoNum || montoNum<=0){ alert('Monto inválido'); return; }
+  registrarPagoExtra(ventaId, montoNum);
+}
+
+async function registrarPagoExtra(ventaId, monto){
+  const v = ventasEntradas.find(x=>x.id===ventaId);
+  if(!v) return;
+  const pagos = Array.isArray(v.pagos)?v.pagos:[];
+  pagos.push({fecha: new Date().toLocaleDateString('es-AR'), monto, nota:'Pago adicional', periodo:'extra'});
+  const nuevoTotal = Math.min(v.precio_total, v.total_pagado + monto);
+  await sb.from('ventas_entradas').update({total_pagado: nuevoTotal, pagos}).eq('id',ventaId);
+  v.total_pagado = nuevoTotal;
+  v.pagos = pagos;
+  renderListaEntradas();
+  toast(`✓ Pago de $${monto.toLocaleString('es-AR',{minimumFractionDigits:0})} registrado`);
+}
+
+function eliminarVentaEntrada(id){
+  showConfirm('¿Eliminar esta entrada?','Esta acción no se puede deshacer.',async()=>{
+    await sb.from('ventas_entradas').delete().eq('id',id);
+    ventasEntradas = ventasEntradas.filter(x=>x.id!==id);
+    renderListaEntradas();
+    toast('Entrada eliminada');
+  });
+}
+
+// ── IMPRIMIR LISTA ──
+function imprimirListaEntradasEvento(){
+  const eventoFiltro = parseInt(document.getElementById('ent-filter-evento').value)||0;
+  const ev = eventosEntrada.find(e=>e.id===eventoFiltro);
+  const titulo = ev ? ev.nombre : 'Todas las entradas';
+
+  let f = ventasEntradas.filter(v=> !eventoFiltro || v.evento_id===eventoFiltro);
+  f.sort((a,b)=>parseInt(a.numero_entrada)-parseInt(b.numero_entrada));
+
+  if(!f.length){ toast('No hay entradas para imprimir','#c0392b'); return; }
+
+  const logoHTML = gymConfig.logoDataUrl
+    ? `<img src="${gymConfig.logoDataUrl}" style="height:45px;object-fit:contain" />`
+    : `<strong>${gymConfig.nombre||'Rendimiento Máximo'}</strong>`;
+
+  const filas = f.map(v=>{
+    const a = alumnos.find(x=>x.id===v.alumno_id);
+    const nombre = a?`${a.nombre} ${a.apellido}`:'—';
+    const tel = a?.telefono||'—';
+    const saldo = Math.max(0, v.precio_total - v.total_pagado);
+    const pct = v.precio_total>0 ? Math.round((v.total_pagado/v.precio_total)*100) : 0;
+    return `<tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;text-align:center;font-weight:700">${v.numero_entrada}</td>
+      <td style="border:1px solid #ddd;padding:5px 8px">${nombre}</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;text-align:center">${tel}</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;text-align:right">$${(v.precio_total||0).toLocaleString('es-AR',{minimumFractionDigits:0})}</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;text-align:right;color:#2d6a2d">$${(v.total_pagado||0).toLocaleString('es-AR',{minimumFractionDigits:0})}</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;text-align:right;color:${saldo>0?'#c0392b':'#2d6a2d'}">${saldo>0?'$'+saldo.toLocaleString('es-AR',{minimumFractionDigits:0}):'✅'}</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;text-align:center;font-weight:700;color:${pct>=100?'#2d6a2d':pct>=50?'#e67e22':'#c0392b'}">${pct}%</td>
+    </tr>`;
+  }).join('');
+
+  const html = `<div id="print-ent-content" style="font-family:Arial,sans-serif;color:#000;width:190mm">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid #111">
+      ${logoHTML}
+      <div style="text-align:right">
+        <div style="font-size:13pt;font-weight:700">${titulo}</div>
+        <div style="font-size:8pt;color:#666">${f.length} entradas · ${new Date().toLocaleDateString('es-AR')}</div>
+      </div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:8.5pt">
+      <thead><tr style="background:#111;color:#fff">
+        <th style="padding:6px 8px;text-align:center;width:40px">N°</th>
+        <th style="padding:6px 8px;text-align:left">Nombre</th>
+        <th style="padding:6px 8px;text-align:center">Teléfono</th>
+        <th style="padding:6px 8px;text-align:right">Total</th>
+        <th style="padding:6px 8px;text-align:right">Pagado</th>
+        <th style="padding:6px 8px;text-align:right">Saldo</th>
+        <th style="padding:6px 8px;text-align:center">%</th>
+      </tr></thead>
+      <tbody>${filas}</tbody>
+    </table>
+    <div style="margin-top:10px;font-size:8pt;color:#666;display:flex;gap:20px">
+      <span>Total recaudado: <strong>$${f.reduce((s,v)=>s+(v.total_pagado||0),0).toLocaleString('es-AR',{minimumFractionDigits:0})}</strong></span>
+      <span>Saldo pendiente: <strong>$${f.reduce((s,v)=>s+Math.max(0,v.precio_total-v.total_pagado),0).toLocaleString('es-AR',{minimumFractionDigits:0})}</strong></span>
+      <span>Pagados completo: <strong>${f.filter(v=>v.total_pagado>=v.precio_total).length}</strong></span>
+    </div>
+  </div>`;
+
+  const area = document.getElementById('print-area');
+  area.innerHTML = html;
+  const content = document.getElementById('print-ent-content');
+  content.style.transform='none';
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    const scale = Math.min((262*3.7795)/content.scrollHeight,(190*3.7795)/content.scrollWidth,1);
+    content.style.transform=`scale(${scale})`;
+    content.style.transformOrigin='top left';
+    area.style.height=(content.scrollHeight*scale)+'px';
+    window.print();
+  }));
 }
 
 // ══ CONFIGURACIÓN ══
@@ -4291,8 +4833,10 @@ async function initApp(){
   bar(73);
   bar(85);
   const cfg  = await qSingle(()=>sb.from('configuracion').select('*').limit(1).maybeSingle());
-  indumentaria = await q(()=>sb.from('indumentaria').select('*').order('nombre'));
-  ventasIndu   = await q(()=>sb.from('ventas_indumentaria').select('*').order('created_at',{ascending:false}));
+  indumentaria   = await q(()=>sb.from('indumentaria').select('*').order('nombre'));
+  ventasIndu     = await q(()=>sb.from('ventas_indumentaria').select('*').order('created_at',{ascending:false}));
+  eventosEntrada = await q(()=>sb.from('eventos_entrada').select('*').order('created_at'));
+  ventasEntradas = await q(()=>sb.from('ventas_entradas').select('*').order('created_at'));
   bar(95);
 
   // Historial agrupado por alumno
