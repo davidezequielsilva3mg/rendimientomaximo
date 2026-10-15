@@ -976,6 +976,18 @@ tr:hover td { background: #faf9f7; }
                   <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Precio con recargo</div>
                 </div>
               </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+                <div class="form-group">
+                  <label class="form-label">🎟️ Numeración desde</label>
+                  <input class="form-input" id="ent-num-desde" type="number" min="1" placeholder="Ej: 1" />
+                  <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Primer número de entrada</div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">🎟️ Numeración hasta</label>
+                  <input class="form-input" id="ent-num-hasta" type="number" min="1" placeholder="Ej: 200" />
+                  <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Último número disponible</div>
+                </div>
+              </div>
               <button class="btn btn-dark" style="align-self:flex-start;padding:9px 24px" onclick="guardarEvento()">Guardar evento</button>
             </div>
 
@@ -2264,7 +2276,9 @@ function renderCajaEntradas(){
 
   const total    = ventas.reduce((s,v)=> s + (parseFloat(v.precio_total)||0), 0);
   const cobrado  = ventas.reduce((s,v)=> s + (parseFloat(v.total_pagado)||0), 0);
-  const saldo    = total - cobrado;
+  // condonados: el saldo se descuenta del total adeudado
+  const saldoReal = ventas.reduce((s,v)=> s + (v.condonado ? 0 : Math.max(0,(parseFloat(v.precio_total)||0)-(parseFloat(v.total_pagado)||0))), 0);
+  const saldo    = saldoReal;
   const pct      = total > 0 ? Math.round(cobrado/total*100) : 0;
 
   document.getElementById('caja-ent-total').textContent    = '$'+total.toLocaleString('es-AR',{minimumFractionDigits:0});
@@ -2275,9 +2289,9 @@ function renderCajaEntradas(){
   document.getElementById('caja-ent-bar').style.width      = pct+'%';
 
   // desglose por estado
-  const pagados  = ventas.filter(v=> (parseFloat(v.total_pagado)||0) >= (parseFloat(v.precio_total)||0) && (parseFloat(v.precio_total)||0)>0);
-  const parcials = ventas.filter(v=> (parseFloat(v.total_pagado)||0) > 0 && (parseFloat(v.total_pagado)||0) < (parseFloat(v.precio_total)||0));
-  const sinPago  = ventas.filter(v=> (parseFloat(v.total_pagado)||0) === 0);
+  const pagados  = ventas.filter(v=> v.condonado || (parseFloat(v.total_pagado)||0) >= (parseFloat(v.precio_total)||0) && (parseFloat(v.precio_total)||0)>0);
+  const parcials = ventas.filter(v=> !v.condonado && (parseFloat(v.total_pagado)||0) > 0 && (parseFloat(v.total_pagado)||0) < (parseFloat(v.precio_total)||0));
+  const sinPago  = ventas.filter(v=> !v.condonado && (parseFloat(v.total_pagado)||0) === 0);
 
   function row(label, color, list){
     const t = list.reduce((s,v)=> s+(parseFloat(v.precio_total)||0),0);
@@ -2325,11 +2339,15 @@ function renderEventosList(){
 async function guardarEvento(){
   const nombre = document.getElementById('ent-nombre').value.trim();
   if(!nombre){ toast('El nombre del evento es obligatorio','#c0392b'); return; }
+  const numDesde = parseInt(document.getElementById('ent-num-desde').value)||1;
+  const numHasta = parseInt(document.getElementById('ent-num-hasta').value)||null;
   const data = {
     nombre,
     descripcion: document.getElementById('ent-descripcion').value.trim(),
     precio_temprano: parseFloat(document.getElementById('ent-precio-temprano').value)||0,
     precio_tarde: parseFloat(document.getElementById('ent-precio-tarde').value)||0,
+    numero_desde: numDesde,
+    numero_hasta: numHasta,
   };
   if(entEventoActual){
     await sb.from('eventos_entrada').update(data).eq('id',entEventoActual);
@@ -2344,6 +2362,8 @@ async function guardarEvento(){
   document.getElementById('ent-descripcion').value='';
   document.getElementById('ent-precio-temprano').value='';
   document.getElementById('ent-precio-tarde').value='';
+  document.getElementById('ent-num-desde').value='';
+  document.getElementById('ent-num-hasta').value='';
   renderEventosList();
   toast('Evento guardado ✓');
 }
@@ -2356,6 +2376,8 @@ function editarEvento(id){
   document.getElementById('ent-descripcion').value = e.descripcion||'';
   document.getElementById('ent-precio-temprano').value = e.precio_temprano||'';
   document.getElementById('ent-precio-tarde').value = e.precio_tarde||'';
+  document.getElementById('ent-num-desde').value = e.numero_desde||'';
+  document.getElementById('ent-num-hasta').value = e.numero_hasta||'';
   document.querySelector('#ent-evento').scrollTop = 0;
 }
 
@@ -2403,9 +2425,21 @@ function entSelEvento(){
 function entActualizarNumero(){
   const id = parseInt(document.getElementById('ent-sel-evento').value);
   if(!id){ document.getElementById('ent-numero').value=''; return; }
+  const ev = eventosEntrada.find(e=>e.id===id);
+  const desde = parseInt(ev?.numero_desde)||1;
+  const hasta = parseInt(ev?.numero_hasta)||9999;
   const ventas = ventasEntradas.filter(v=>v.evento_id===id);
-  const maxNum = ventas.reduce((max,v)=>{ const n=parseInt(v.numero_entrada)||0; return n>max?n:max; }, 0);
-  document.getElementById('ent-numero').value = String(maxNum+1).padStart(3,'0');
+  const maxNum = ventas.reduce((max,v)=>{ const n=parseInt(v.numero_entrada)||0; return n>max?n:max; }, desde-1);
+  const siguiente = Math.max(desde, maxNum+1);
+  const campo = document.getElementById('ent-numero');
+  campo.value = String(siguiente).padStart(3,'0');
+  if(siguiente > hasta){
+    campo.style.borderColor='#e74c3c';
+    campo.title = `⚠️ Superás el límite de numeración (hasta #${hasta})`;
+  } else {
+    campo.style.borderColor='';
+    campo.title = `Rango: #${String(desde).padStart(3,'0')} al #${String(hasta).padStart(3,'0')}`;
+  }
 }
 
 function entCalcPrecio(){
@@ -2544,8 +2578,9 @@ function renderListaEntradas(){
     const a = alumnos.find(x=>x.id===v.alumno_id);
     const nombre = a?`${a.nombre} ${a.apellido}`:'—';
     const tel = a?.telefono||'—';
-    const saldo = Math.max(0, v.precio_total - v.total_pagado);
-    const pct = v.precio_total>0 ? Math.round((v.total_pagado/v.precio_total)*100) : 0;
+    const condonado = !!v.condonado;
+    const saldo = condonado ? 0 : Math.max(0, v.precio_total - v.total_pagado);
+    const pct = condonado ? 100 : (v.precio_total>0 ? Math.round((v.total_pagado/v.precio_total)*100) : 0);
     const pctColor = pct>=100?'#2d6a2d':pct>=50?'#e67e22':'#c0392b';
     const ev = eventosEntrada.find(e=>e.id===v.evento_id);
     return `<tr>
@@ -2554,7 +2589,7 @@ function renderListaEntradas(){
       <td style="font-size:12px">${tel}</td>
       <td>$${(v.precio_total||0).toLocaleString('es-AR',{minimumFractionDigits:0})}</td>
       <td style="color:#2d6a2d;font-weight:600">$${(v.total_pagado||0).toLocaleString('es-AR',{minimumFractionDigits:0})}</td>
-      <td style="color:${saldo>0?'#c0392b':'#2d6a2d'};font-weight:600">${saldo>0?'$'+saldo.toLocaleString('es-AR',{minimumFractionDigits:0}):'✅'}</td>
+      <td style="color:${saldo>0?'#c0392b':'#2d6a2d'};font-weight:600">${saldo>0?'$'+saldo.toLocaleString('es-AR',{minimumFractionDigits:0}):(condonado?'<span title="Condonado">✅</span>':'✅')}</td>
       <td><div style="display:flex;align-items:center;gap:6px">
         <div style="background:#eee;border-radius:4px;height:8px;width:60px;overflow:hidden">
           <div style="height:100%;background:${pctColor};width:${pct}%"></div>
@@ -2601,13 +2636,10 @@ async function marcarEntradaCompleta(ventaId){
   if(!v) return;
   const a = alumnos.find(x=>x.id===v.alumno_id);
   const saldo = Math.max(0, v.precio_total - v.total_pagado);
-  if(!confirm(`¿Marcar como completo?\nSe condonará el saldo de $${saldo.toLocaleString('es-AR',{minimumFractionDigits:0})} para ${a?.nombre||''} ${a?.apellido||''}.\nNo se registrará un pago real.`)) return;
-  const pagos = Array.isArray(v.pagos)?v.pagos:[];
-  pagos.push({fecha: new Date().toLocaleDateString('es-AR'), monto: saldo, nota:'Condonado / sin cobro', periodo:'extra'});
-  const {error} = await sb.from('ventas_entradas').update({total_pagado: v.precio_total, pagos}).eq('id',ventaId);
+  if(!confirm(`¿Marcar como completo?\nSe va a condonar el saldo de $${saldo.toLocaleString('es-AR',{minimumFractionDigits:0})} para ${a?.nombre||''} ${a?.apellido||''}.\nLo que entregó ($${(v.total_pagado||0).toLocaleString('es-AR',{minimumFractionDigits:0})}) queda registrado como pago real.`)) return;
+  const {error} = await sb.from('ventas_entradas').update({condonado: true}).eq('id',ventaId);
   if(error){ alert('Error al guardar: '+error.message); return; }
-  v.total_pagado = v.precio_total;
-  v.pagos = pagos;
+  v.condonado = true;
   renderListaEntradas();
   try{ if(document.getElementById('ent-caja').style.display==='flex') renderCajaEntradas(); }catch(e){}
   toast('✓ Entrada marcada como completa');
