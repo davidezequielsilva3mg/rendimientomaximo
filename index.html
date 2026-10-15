@@ -2596,6 +2596,23 @@ async function registrarPagoExtra(ventaId, monto){
   toast(`✓ Pago de $${monto.toLocaleString('es-AR',{minimumFractionDigits:0})} registrado`);
 }
 
+async function marcarEntradaCompleta(ventaId){
+  const v = ventasEntradas.find(x=>x.id===ventaId);
+  if(!v) return;
+  const a = alumnos.find(x=>x.id===v.alumno_id);
+  const saldo = Math.max(0, v.precio_total - v.total_pagado);
+  if(!confirm(`¿Marcar como completo?\nSe condonará el saldo de $${saldo.toLocaleString('es-AR',{minimumFractionDigits:0})} para ${a?.nombre||''} ${a?.apellido||''}.\nNo se registrará un pago real.`)) return;
+  const pagos = Array.isArray(v.pagos)?v.pagos:[];
+  pagos.push({fecha: new Date().toLocaleDateString('es-AR'), monto: saldo, nota:'Condonado / sin cobro', periodo:'extra'});
+  const {error} = await sb.from('ventas_entradas').update({total_pagado: v.precio_total, pagos}).eq('id',ventaId);
+  if(error){ alert('Error al guardar: '+error.message); return; }
+  v.total_pagado = v.precio_total;
+  v.pagos = pagos;
+  renderListaEntradas();
+  try{ if(document.getElementById('ent-caja').style.display==='flex') renderCajaEntradas(); }catch(e){}
+  toast('✓ Entrada marcada como completa');
+}
+
 function eliminarVentaEntrada(id){
   showConfirm('¿Eliminar esta entrada?','Esta acción no se puede deshacer.',async()=>{
     await sb.from('ventas_entradas').delete().eq('id',id);
