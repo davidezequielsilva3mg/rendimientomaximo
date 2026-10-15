@@ -2327,6 +2327,7 @@ function renderEventosList(){
         <div style="font-size:12px;margin-top:4px">
           <span style="background:#fff3cd;padding:2px 8px;border-radius:4px;margin-right:6px">💛 $${(e.precio_temprano||0).toLocaleString('es-AR',{minimumFractionDigits:0})}</span>
           <span style="background:#fce8e8;padding:2px 8px;border-radius:4px">🔴 $${(e.precio_tarde||0).toLocaleString('es-AR',{minimumFractionDigits:0})}</span>
+          ${e.numero_desde||e.numero_hasta?`<span style="background:#e8f0fe;padding:2px 8px;border-radius:4px;margin-left:6px">🎟️ #${String(e.numero_desde||1).padStart(3,'0')} – #${String(e.numero_hasta||'?').padStart?String(e.numero_hasta||'?').padStart(3,'0'):'?'}</span>`:''}
         </div>
       </div>
       <div style="display:flex;gap:8px">
